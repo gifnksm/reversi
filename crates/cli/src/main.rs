@@ -7,8 +7,8 @@ fn main() -> Result<()> {
     let mut game = Game::new();
 
     while let GameState::Turn(color) = *game.state() {
-        print_board(game.board(), color);
-        print_score(game.board(), color);
+        print_board(game.board(), Some(color));
+        print_score(game.board(), Some(color));
 
         let pos = read_pos(game.board(), color)?;
         if let Err(e) = game.put(pos) {
@@ -16,26 +16,36 @@ fn main() -> Result<()> {
         }
     }
 
+    print_board(game.board(), None);
+    print_score(game.board(), None);
     print_result(game.board());
 
     Ok(())
 }
 
-fn print_score(board: &Board, color: Color) {
-    eprintln!(
-        "  O : {:2} {}",
-        board.count(Color::Black),
-        if color == Color::Black { "(you)" } else { " " }
-    );
-    eprintln!(
-        "  X : {:2} {}",
-        board.count(Color::White),
-        if color == Color::White { "(you)" } else { " " }
-    );
+fn print_score(board: &Board, color: Option<Color>) {
+    fn print(board: &Board, target_color: Color, your_color: Option<Color>) {
+        let target_mark = match target_color {
+            Color::Black => 'O',
+            Color::White => 'X',
+        };
+        eprintln!(
+            "  {} : {:2} {}",
+            target_mark,
+            board.count(target_color),
+            if Some(target_color) == your_color {
+                "(you)"
+            } else {
+                " "
+            }
+        );
+    }
+    print(board, Color::Black, color);
+    print(board, Color::White, color);
     eprintln!();
 }
 
-fn print_board(board: &Board, color: Color) {
+fn print_board(board: &Board, color: Option<Color>) {
     eprintln!();
     eprint!(" ");
     for ch in 'A'..='H' {
@@ -52,11 +62,11 @@ fn print_board(board: &Board, color: Color) {
                 Some(reversi_core::Color::Black) => eprint!("O"),
                 Some(reversi_core::Color::White) => eprint!("X"),
                 None => {
-                    if board.can_flip(color, pos) {
-                        eprint!("*");
-                    } else {
-                        eprint!(".")
-                    }
+                    let ch = match color {
+                        Some(color) if board.can_flip(color, pos) => '*',
+                        _ => '.',
+                    };
+                    eprint!("{}", ch);
                 }
             }
         }
