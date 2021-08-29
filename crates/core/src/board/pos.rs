@@ -51,8 +51,8 @@ pub enum ParsePosError {
     InvalidAlphabet(char),
     #[error("cannot parse `{0}` as number: `{1}`")]
     ParseInt(String, ParseIntError),
-    #[error("invalid number `{0}` found in string")]
-    InvalidNumber(i32),
+    #[error("invalid pos `{0}{1}`")]
+    InvalidPos(char, i32),
 }
 
 impl FromStr for Pos {
@@ -61,17 +61,21 @@ impl FromStr for Pos {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = s.to_ascii_uppercase();
         let mut cs = s.chars();
-        let alpha = cs.next().ok_or(Self::Err::Empty)?;
-        let x = match alpha {
-            'A'..='H' => (alpha as u8 - b'A') as i32,
-            _ => return Err(Self::Err::InvalidAlphabet(alpha)),
-        };
-        let y = cs
+
+        let alpha = cs.next().ok_or(Self::Err::Empty).and_then(|alpha| {
+            if !alpha.is_alphabetic() {
+                return Err(Self::Err::InvalidAlphabet(alpha));
+            }
+            Ok(alpha)
+        })?;
+        let num = cs
             .as_str()
             .parse::<i32>()
-            .map_err(|e| ParsePosError::ParseInt(cs.as_str().into(), e))?
-            - 1;
-        Pos::from_xy(x, y).ok_or_else(|| Self::Err::InvalidNumber(y))
+            .map_err(|e| ParsePosError::ParseInt(cs.as_str().into(), e))?;
+
+        let x = (alpha as u8 - b'A') as i32;
+        let y = num - 1;
+        Pos::from_xy(x, y).ok_or_else(|| Self::Err::InvalidPos(alpha, num))
     }
 }
 
@@ -139,6 +143,10 @@ impl Pos {
         let amt = dir.to_add_amount();
         iter::successors(Some(*self), move |p| Self::from_index(p.0 + amt)).skip(1)
     }
+
+    pub fn neighbor(&self, dir: Direction) -> Option<Self> {
+        Self::from_index(self.0 + dir.to_add_amount())
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -185,6 +193,14 @@ impl std::ops::Not for PosSet {
 
 macro_rules! impl_bit_ops {
     ($trait:ident, $name:ident, $op:tt) => {
+        impl std::ops::$trait<Pos> for Pos {
+            type Output = PosSet;
+
+            fn $name(self, rhs: Pos) -> Self::Output {
+                self.bit() $op rhs.bit()
+            }
+        }
+
         impl std::ops::$trait<Pos> for PosSet {
             type Output = Self;
 

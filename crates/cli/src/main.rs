@@ -1,107 +1,119 @@
-use reversi_core::{Board, Color, Game, GameState, Pos};
-use std::io;
+use crate::{
+    cli::Cli,
+    player::{Computer, Human, Player},
+    traits::ColorExt,
+};
+use reversi_core::{Board, Color, Game, GameState};
+use std::{fmt, io};
+
+mod cli;
+mod player;
+mod traits;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn main() -> Result<()> {
-    let mut game = Game::new();
+    let board = Board::with_size(5, 5)?;
+    let game = Game::with_board(board);
+    let black_player = choose_player(Color::Black)?;
+    let white_player = choose_player(Color::White)?;
 
-    while let GameState::Turn(color) = *game.state() {
-        print_board(game.board(), Some(color));
-        print_score(game.board(), Some(color));
+    let mut cli = Cli::new(game, black_player, white_player);
 
-        let pos = read_pos(game.board(), color)?;
-        if let Err(e) = game.put(pos) {
-            eprintln!("ERROR: {}", e);
-        }
+    while let GameState::Turn(color) = *cli.state() {
+        cli.print_board(Some(color));
+        cli.print_score(Some(color));
+        cli.do_turn(color)?;
     }
 
-    print_board(game.board(), None);
-    print_score(game.board(), None);
-    print_result(game.board());
+    cli.print_board(None);
+    cli.print_score(None);
+    cli.print_result();
 
     Ok(())
 }
 
-fn print_score(board: &Board, color: Option<Color>) {
-    fn print(board: &Board, target_color: Color, your_color: Option<Color>) {
-        let target_mark = match target_color {
-            Color::Black => 'O',
-            Color::White => 'X',
-        };
-        eprintln!(
-            "  {} : {:2} {}",
-            target_mark,
-            board.count(target_color),
-            if Some(target_color) == your_color {
-                "(you)"
-            } else {
-                " "
-            }
-        );
-    }
-    print(board, Color::Black, color);
-    print(board, Color::White, color);
-    eprintln!();
-}
-
-fn print_board(board: &Board, color: Option<Color>) {
-    eprintln!();
-    eprint!(" ");
-    for ch in 'A'..='H' {
-        eprint!(" {}", ch);
-    }
-    eprintln!();
-
-    for y in 0..Board::SIZE {
-        eprint!("{}", y + 1);
-        for x in 0..Board::SIZE {
-            let pos = Pos::from_xy(x, y).unwrap();
-            eprint!(" ");
-            match board.get(pos) {
-                Some(reversi_core::Color::Black) => eprint!("O"),
-                Some(reversi_core::Color::White) => eprint!("X"),
-                None => {
-                    let ch = match color {
-                        Some(color) if board.can_flip(color, pos) => '*',
-                        _ => '.',
-                    };
-                    eprint!("{}", ch);
-                }
-            }
-        }
-        eprintln!();
-    }
-    eprintln!();
-}
-
-fn read_pos(board: &Board, color: Color) -> Result<Pos> {
-    let candidate = board.flip_candidates(color).next().unwrap();
-
-    eprintln!("Input position to put a disk [{}]", candidate);
+fn read_input<T>(
+    prompt: &str,
+    default_value: Option<T>,
+    candidates: &[(T, &str)],
+    mut parser: impl FnMut(&str) -> Result<T>,
+) -> Result<T>
+where
+    T: fmt::Display,
+{
+    let mut buf = String::new();
     loop {
+        if let Some(default_value) = &default_value {
+            eprintln!("{} [{}]", prompt, default_value);
+        } else {
+            eprintln!("{}", prompt);
+        }
+
+        if !candidates.is_empty() {
+            for (candidate, desc) in candidates {
+                eprintln!("  {}: {}", candidate, desc);
+            }
+        }
+
         eprint!("> ");
-        let mut buf = String::new();
+        buf.clear();
         io::stdin().read_line(&mut buf)?;
-        let buf = buf.trim();
-        if buf.is_empty() {
-            return Ok(candidate);
+
+        let s = buf.trim();
+        if s.is_empty() {
+            if let Some(default_value) = default_value {
+                return Ok(default_value);
+            }
         }
-        match buf.parse() {
-            Ok(pos) => return Ok(pos),
-            Err(e) => eprintln!("ERROR: {}", e),
-        }
+
+        match parser(s) {
+            Ok(val) => return Ok(val),
+            Err(e) => {
+                eprintln!("ERROR: {}", e);
+                eprintln!();
+                continue;
+            }
+        };
     }
 }
 
-fn print_result(board: &Board) {
-    eprintln!();
+fn choose_player(color: Color) -> Result<Box<dyn Player>> {
+    #[derive(Debug, Clone, Copy)]
+    enum PlayerKind {
+        Human,
+        Computer,
+    }
+    impl fmt::Display for PlayerKind {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            match self {
+                PlayerKind::Human => write!(f, "H"),
+                PlayerKind::Computer => write!(f, "C"),
+            }
+        }
+    }
 
-    let black = board.count(Color::Black);
-    let white = board.count(Color::White);
-    match black.cmp(&white) {
-        std::cmp::Ordering::Less => eprintln!("X wins!"),
-        std::cmp::Ordering::Equal => eprintln!("DRAW!"),
-        std::cmp::Ordering::Greater => eprintln!("O wins!"),
+    let candidates = &[
+        (PlayerKind::Human, "Human"),
+        (PlayerKind::Computer, "Computer"),
+    ];
+
+    let kind = read_input(
+        &format!("Choose {} player kind", color.mark()),
+        Some(PlayerKind::Human),
+        candidates,
+        |s| {
+            let s = s.to_ascii_uppercase();
+            match s.as_str() {
+                "H" => Ok(PlayerKind::Human),
+                "C" => Ok(PlayerKind::Computer),
+                _ => Err(format!("Invalid player kind: {}", s).into()),
+            }
+        },
+    )?;
+
+    match kind {
+        PlayerKind::Human => Ok(Box::new(Human::new(color))),
+        PlayerKind::Computer => Ok(Box::new(Computer::new(color))),
     }
 }

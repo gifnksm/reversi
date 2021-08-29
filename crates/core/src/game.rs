@@ -36,6 +36,13 @@ impl Game {
         Self::default()
     }
 
+    pub fn with_board(board: Board) -> Self {
+        Self {
+            board,
+            ..Default::default()
+        }
+    }
+
     pub fn state(&self) -> &GameState {
         &self.state
     }
