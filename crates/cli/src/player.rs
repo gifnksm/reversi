@@ -1,12 +1,12 @@
-use std::time::Instant;
-
-use crate::Result;
+use crate::{traits::ColorExt, Result};
 use reversi_core::{Board, Color, Com, NextMove, Pos};
+use std::time::{Duration, Instant};
 
 pub trait Player {
     fn name(&self) -> &str;
     fn color(&self) -> Color;
-    fn next_move(&self, board: &Board) -> Result<Pos>;
+    fn next_move(&mut self, board: &Board) -> Result<Pos>;
+    fn print_summary(&self);
 }
 
 #[derive(Debug)]
@@ -29,7 +29,7 @@ impl Player for Human {
         self.color
     }
 
-    fn next_move(&self, board: &Board) -> Result<Pos> {
+    fn next_move(&mut self, board: &Board) -> Result<Pos> {
         let candidate = board.flip_candidates(self.color).next().unwrap();
 
         crate::read_input("Input position to put a disk", Some(candidate), &[], |s| {
@@ -40,12 +40,16 @@ impl Player for Human {
             Ok(pos)
         })
     }
+
+    fn print_summary(&self) {}
 }
 
 #[derive(Debug)]
 pub struct Computer {
     color: Color,
     com: Com,
+    total_thinking_time: Duration,
+    total_visited_nodes: u64,
 }
 
 impl Computer {
@@ -53,6 +57,8 @@ impl Computer {
         Self {
             color,
             com: Com::new(12, 12, 12),
+            total_thinking_time: Duration::ZERO,
+            total_visited_nodes: 0,
         }
     }
 }
@@ -66,7 +72,7 @@ impl Player for Computer {
         self.color
     }
 
-    fn next_move(&self, board: &Board) -> Result<Pos> {
+    fn next_move(&mut self, board: &Board) -> Result<Pos> {
         eprintln!("Computer thinking...");
         let start = Instant::now();
         let NextMove {
@@ -86,6 +92,23 @@ impl Player for Computer {
             visited_nodes as f64 / elapsed.as_secs_f64() / 1000.0
         );
 
+        self.total_thinking_time += elapsed;
+        self.total_visited_nodes += u64::from(visited_nodes);
+
         Ok(best_pos)
+    }
+
+    fn print_summary(&self) {
+        eprintln!("{} Computer performance summary:", self.color.mark());
+        eprintln!(
+            "  Thinking time: {:.2}",
+            self.total_thinking_time.as_secs_f64()
+        );
+        eprintln!("  # of nodes: {}", self.total_visited_nodes);
+        eprintln!(
+            "  kNPS: {:.2}",
+            self.total_visited_nodes as f64 / self.total_thinking_time.as_secs_f64() / 1000.0
+        );
+        eprintln!();
     }
 }

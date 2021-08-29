@@ -9,14 +9,14 @@ pub struct Game {
 
 #[derive(Debug, Clone, Copy)]
 pub enum GameState {
-    Turn(Color),
-    GameOver,
+    Turn(u32, Color),
+    GameOver(u32),
 }
 
 impl Default for Game {
     fn default() -> Self {
         Self {
-            state: GameState::Turn(Color::Black),
+            state: GameState::Turn(1, Color::Black),
             board: Board::default(),
             history: vec![],
         }
@@ -52,9 +52,9 @@ impl Game {
     }
 
     pub fn put(&mut self, pos: Pos) -> Result<(), PutError> {
-        let color = match self.state {
-            GameState::Turn(color) => color,
-            GameState::GameOver => return Err(PutError::GameOver),
+        let (turn, color) = match self.state {
+            GameState::Turn(turn, color) => (turn, color),
+            GameState::GameOver(_) => return Err(PutError::GameOver),
         };
 
         let (count, flipped) = self.board.flipped(color, pos);
@@ -66,13 +66,13 @@ impl Game {
         self.board = flipped;
 
         if self.board.can_play(color.reverse()) {
-            self.state = GameState::Turn(color.reverse());
+            self.state = GameState::Turn(turn + 1, color.reverse());
             return Ok(());
         }
         if self.board.can_play(color) {
             return Ok(());
         }
-        self.state = GameState::GameOver;
+        self.state = GameState::GameOver(turn + 1);
         Ok(())
     }
 }

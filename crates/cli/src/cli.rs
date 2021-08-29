@@ -23,12 +23,20 @@ impl Cli {
         }
     }
 
+    pub fn player_mut(&mut self, color: Color) -> &mut dyn Player {
+        match color {
+            Color::Black => &mut *self.black_player,
+            Color::White => &mut *self.white_player,
+        }
+    }
+
     pub fn state(&self) -> &GameState {
         self.game.state()
     }
 
     pub fn do_turn(&mut self, color: Color) -> Result<()> {
-        let pos = self.player(color).next_move(self.game.board())?;
+        let board = *self.game.board();
+        let pos = self.player_mut(color).next_move(&board)?;
         self.game.put(pos)?;
         Ok(())
     }
@@ -102,5 +110,10 @@ impl Cli {
             Some(player) => eprintln!("{} {} wins!", player.color().mark(), player.name()),
             None => eprintln!("DRAW!"),
         }
+
+        eprintln!();
+
+        self.black_player.print_summary();
+        self.white_player.print_summary();
     }
 }

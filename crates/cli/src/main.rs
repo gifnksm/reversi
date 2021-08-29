@@ -20,15 +20,31 @@ fn main() -> Result<()> {
 
     let mut cli = Cli::new(game, black_player, white_player);
 
-    while let GameState::Turn(color) = *cli.state() {
-        cli.print_board(Some(color));
-        cli.print_score(Some(color));
-        cli.do_turn(color)?;
+    loop {
+        match *cli.state() {
+            GameState::Turn(turn, color) => {
+                let player = cli.player(color);
+                eprintln!();
+                eprintln!(
+                    "=== Turn #{}: {} {}'s Turn ===",
+                    turn,
+                    color.mark(),
+                    player.name()
+                );
+                cli.print_board(Some(color));
+                cli.print_score(Some(color));
+                cli.do_turn(color)?;
+            }
+            GameState::GameOver(turn) => {
+                eprintln!();
+                eprintln!("=== Turn #{}: Game Over ===", turn);
+                cli.print_board(None);
+                cli.print_score(None);
+                cli.print_result();
+                break;
+            }
+        }
     }
-
-    cli.print_board(None);
-    cli.print_score(None);
-    cli.print_result();
 
     Ok(())
 }
