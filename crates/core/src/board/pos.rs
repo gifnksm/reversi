@@ -143,10 +143,6 @@ impl Pos {
         let amt = dir.to_add_amount();
         iter::successors(Some(*self), move |p| Self::from_index(p.0 + amt)).skip(1)
     }
-
-    pub fn neighbor(&self, dir: Direction) -> Option<Self> {
-        Self::from_index(self.0 + dir.to_add_amount())
-    }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

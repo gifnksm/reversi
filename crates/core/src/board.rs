@@ -45,10 +45,11 @@ impl Board {
         }
 
         fn init_set(width: i32, height: i32) -> Option<(PosSet, PosSet)> {
-            let down_right = Pos::from_xy(width / 2, height / 2)?;
-            let up_left = down_right.neighbor(Direction::UpLeft)?;
-            let up_right = down_right.neighbor(Direction::Up)?;
-            let down_left = down_right.neighbor(Direction::Left)?;
+            let (x0, y0) = (width / 2 - 1, height / 2 - 1);
+            let up_left = Pos::from_xy(x0, y0)?;
+            let up_right = Pos::from_xy(x0 + 1, y0)?;
+            let down_left = Pos::from_xy(x0, y0 + 1)?;
+            let down_right = Pos::from_xy(x0 + 1, y0 + 1)?;
             let black_set = up_right | down_left;
             let white_set = up_left | down_right;
             Some((black_set, white_set))
