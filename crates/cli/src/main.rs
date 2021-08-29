@@ -13,7 +13,7 @@ mod traits;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn main() -> Result<()> {
-    let board = Board::with_size(5, 5)?;
+    let board = Board::with_size(6, 6)?;
     let game = Game::with_board(board);
     let black_player = choose_player(Color::Black)?;
     let white_player = choose_player(Color::White)?;

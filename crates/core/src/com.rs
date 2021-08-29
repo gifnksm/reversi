@@ -36,7 +36,14 @@ impl Com {
 
     fn end_search(&self, board: &Board, color: Color, depth: u32) -> NextMove {
         let mut visited_nodes = 0;
-        let (score, best_pos) = self.nega_max(board, color, depth, false, &mut visited_nodes);
+        let (score, best_pos) = self.alpha_beta(
+            board,
+            color,
+            depth,
+            (-i64::MAX, i64::MAX),
+            false,
+            &mut visited_nodes,
+        );
         NextMove {
             best_pos,
             visited_nodes,
@@ -46,7 +53,14 @@ impl Com {
 
     fn wld_search(&self, board: &Board, color: Color, depth: u32) -> NextMove {
         let mut visited_nodes = 0;
-        let (score, best_pos) = self.nega_max(board, color, depth, false, &mut visited_nodes);
+        let (score, best_pos) = self.alpha_beta(
+            board,
+            color,
+            depth,
+            (-i64::MAX, i64::MAX),
+            false,
+            &mut visited_nodes,
+        );
         NextMove {
             best_pos,
             visited_nodes,
@@ -56,7 +70,14 @@ impl Com {
 
     fn mid_search(&self, board: &Board, color: Color, depth: u32) -> NextMove {
         let mut visited_nodes = 0;
-        let (score, best_pos) = self.nega_max(board, color, depth, false, &mut visited_nodes);
+        let (score, best_pos) = self.alpha_beta(
+            board,
+            color,
+            depth,
+            (-i64::MAX, i64::MAX),
+            false,
+            &mut visited_nodes,
+        );
         NextMove {
             best_pos,
             visited_nodes,
@@ -64,11 +85,12 @@ impl Com {
         }
     }
 
-    fn nega_max(
+    fn alpha_beta(
         &self,
         board: &Board,
         color: Color,
         depth: u32,
+        (mut alpha, beta): (i64, i64),
         in_pass: bool,
         visited_nodes: &mut u32,
     ) -> (i64, Option<Pos>) {
@@ -81,21 +103,35 @@ impl Com {
             return (evaluate(board, color), None);
         }
 
-        let mut max = i64::MIN;
+        let mut has_candidate = false;
         let mut best_pos = None;
         for pos in board.flip_candidates(color) {
+            has_candidate = true;
             let (_, flipped) = board.flipped(color, pos);
             let value = -self
-                .nega_max(&flipped, color.reverse(), depth - 1, false, visited_nodes)
+                .alpha_beta(
+                    &flipped,
+                    color.reverse(),
+                    depth - 1,
+                    (-beta, -alpha),
+                    false,
+                    visited_nodes,
+                )
                 .0;
-            if value > max {
-                max = value;
+            if value > alpha {
+                alpha = value;
                 best_pos = Some((pos, value));
+                if alpha >= beta {
+                    return (beta, None);
+                }
             }
         }
 
         if let Some((pos, score)) = best_pos {
             return (score, Some(pos));
+        }
+        if has_candidate {
+            return (alpha, None);
         }
 
         if in_pass {
@@ -105,7 +141,14 @@ impl Com {
 
         (
             -self
-                .nega_max(board, color.reverse(), depth, true, visited_nodes)
+                .alpha_beta(
+                    board,
+                    color.reverse(),
+                    depth,
+                    (-beta, -alpha),
+                    true,
+                    visited_nodes,
+                )
                 .0,
             None,
         )
