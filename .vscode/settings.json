@@ -1,8 +1,11 @@
 {
     "cSpell.words": [
+        "argh",
+        "bincode",
         "bitand",
         "bitor",
         "bitxor",
+        "coeff",
         "reversi",
         "thiserror"
     ]

@@ -8,9 +8,6 @@ mod pos;
 pub struct Board {
     black: PosSet,
     white: PosSet,
-    wall: PosSet,
-    width: i32,
-    height: i32,
 }
 
 impl Default for Board {
@@ -19,86 +16,28 @@ impl Default for Board {
     }
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum WithSizeError {
-    #[error("invalid size: ({0},{1})")]
-    InvalidSize(i32, i32),
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Cell {
-    Disk(Color),
-    Wall,
-    Empty,
-}
-
 impl Board {
     pub const SIZE: i32 = 8;
 
     pub fn new() -> Self {
-        Self::with_size(Board::SIZE, Board::SIZE).unwrap()
-    }
-
-    pub fn with_size(width: i32, height: i32) -> Result<Self, WithSizeError> {
-        if width > Board::SIZE || height > Board::SIZE {
-            return Err(WithSizeError::InvalidSize(width, height));
+        Self {
+            black: PosSet::new() | Pos::E4 | Pos::D5,
+            white: PosSet::new() | Pos::D4 | Pos::E5,
         }
-
-        fn init_set(width: i32, height: i32) -> Option<(PosSet, PosSet)> {
-            let (x0, y0) = (width / 2 - 1, height / 2 - 1);
-            let up_left = Pos::from_xy(x0, y0)?;
-            let up_right = Pos::from_xy(x0 + 1, y0)?;
-            let down_left = Pos::from_xy(x0, y0 + 1)?;
-            let down_right = Pos::from_xy(x0 + 1, y0 + 1)?;
-            let black_set = up_right | down_left;
-            let white_set = up_left | down_right;
-            Some((black_set, white_set))
-        }
-
-        let (black, white) =
-            init_set(width, height).ok_or(WithSizeError::InvalidSize(width, height))?;
-
-        let mut wall = PosSet::new();
-        for y in 0..Board::SIZE {
-            for x in 0..Board::SIZE {
-                if x >= width || y >= height {
-                    wall |= Pos::from_xy(x, y).unwrap();
-                }
-            }
-        }
-
-        Ok(Board {
-            black,
-            white,
-            wall,
-            width,
-            height,
-        })
     }
 
-    pub fn width(&self) -> i32 {
-        self.width
-    }
-
-    pub fn height(&self) -> i32 {
-        self.height
-    }
-
-    pub fn get(&self, pos: Pos) -> Cell {
+    pub fn get(&self, pos: Pos) -> Option<Color> {
         assert!((self.black & self.white).is_empty());
         if self.black.contains(&pos) {
-            Cell::Disk(Color::Black)
+            Some(Color::Black)
         } else if self.white.contains(&pos) {
-            Cell::Disk(Color::White)
-        } else if self.wall.contains(&pos) {
-            Cell::Wall
+            Some(Color::White)
         } else {
-            Cell::Empty
+            None
         }
     }
 
     pub fn set(&mut self, pos: Pos, color: Color) {
-        assert!(!self.wall.contains(&pos));
         let (insert_mask, remove_mask) = match color {
             Color::Black => (&mut self.black, &mut self.white),
             Color::White => (&mut self.white, &mut self.black),
@@ -112,17 +51,19 @@ impl Board {
         match color {
             Some(Color::Black) => self.black.count(),
             Some(Color::White) => self.white.count(),
-            None => {
-                (Board::SIZE * Board::SIZE) as u32
-                    - self.white.count()
-                    - self.black.count()
-                    - self.wall.count()
-            }
+            None => (Board::SIZE * Board::SIZE) as u32 - self.white.count() - self.black.count(),
+        }
+    }
+
+    pub fn reverse(&self) -> Self {
+        Self {
+            black: self.white,
+            white: self.black,
         }
     }
 
     pub fn flipped(&self, color: Color, pos: Pos) -> (usize, Self) {
-        if (self.black | self.white | self.wall).contains(&pos) {
+        if (self.black | self.white).contains(&pos) {
             return (0, *self);
         }
 
@@ -147,7 +88,7 @@ impl Board {
     }
 
     pub fn can_flip(&self, color: Color, pos: Pos) -> bool {
-        if (self.black | self.white | self.wall).contains(&pos) {
+        if (self.black | self.white).contains(&pos) {
             return false;
         }
 
@@ -166,7 +107,7 @@ impl Board {
             Color::Black => self.white,
             Color::White => self.black,
         };
-        let candidates = !(self.black | self.white | self.wall) & other_set.neighbors();
+        let candidates = !(self.black | self.white) & other_set.neighbors();
         candidates
             .into_iter()
             .filter(move |pos| self.can_flip(color, *pos))

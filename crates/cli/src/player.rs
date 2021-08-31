@@ -1,6 +1,9 @@
 use crate::{traits::ColorExt, Result};
-use reversi_core::{Board, Color, Com, NextMove, Pos};
-use std::time::{Duration, Instant};
+use reversi_core::{Board, Color, Com, Evaluator, NextMove, Pos};
+use std::{
+    fmt,
+    time::{Duration, Instant},
+};
 
 pub trait Player {
     fn name(&self) -> &str;
@@ -44,19 +47,46 @@ impl Player for Human {
     fn print_summary(&self) {}
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum ComputerLevel {
+    Level1,
+    Level2,
+    Level3,
+    Level4,
+}
+
+impl fmt::Display for ComputerLevel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Level1 => write!(f, "1"),
+            Self::Level2 => write!(f, "2"),
+            Self::Level3 => write!(f, "3"),
+            Self::Level4 => write!(f, "4"),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Computer {
     color: Color,
+    evaluator: Evaluator,
     com: Com,
     total_thinking_time: Duration,
     total_visited_nodes: u64,
 }
 
 impl Computer {
-    pub fn new(color: Color) -> Self {
+    pub fn new(color: Color, evaluator: Evaluator, level: ComputerLevel) -> Self {
+        let com = match level {
+            ComputerLevel::Level1 => Com::new(2, 8, 10),
+            ComputerLevel::Level2 => Com::new(4, 10, 12),
+            ComputerLevel::Level3 => Com::new(6, 12, 14),
+            ComputerLevel::Level4 => Com::new(8, 14, 16),
+        };
         Self {
             color,
-            com: Com::new(12, 12, 12),
+            evaluator,
+            com,
             total_thinking_time: Duration::ZERO,
             total_visited_nodes: 0,
         }
@@ -79,7 +109,7 @@ impl Player for Computer {
             best_pos,
             score,
             visited_nodes,
-        } = self.com.next_move(board, self.color);
+        } = self.com.next_move(&self.evaluator, board, self.color);
         let elapsed = start.elapsed();
         let best_pos = best_pos.ok_or("cannot find a pos to put")?;
 

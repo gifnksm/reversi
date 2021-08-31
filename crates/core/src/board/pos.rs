@@ -119,7 +119,7 @@ impl Pos {
         }
     }
 
-    pub const fn from_index(index: i32) -> Option<Self> {
+    const fn from_index(index: i32) -> Option<Self> {
         if (1 << index) & AVAILABLE_BITS != 0 {
             Some(Self(index))
         } else {

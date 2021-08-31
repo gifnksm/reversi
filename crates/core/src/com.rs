@@ -1,10 +1,10 @@
-use crate::{Board, Color, Pos};
+use crate::{Board, Color, Evaluator, Pos};
 
 #[derive(Debug, Clone, Copy)]
 pub struct NextMove {
     pub best_pos: Option<Pos>,
     pub visited_nodes: u32,
-    pub score: i64,
+    pub score: i32,
 }
 
 #[derive(Debug)]
@@ -23,24 +23,39 @@ impl Com {
         }
     }
 
-    pub fn next_move(&self, board: &Board, color: Color) -> NextMove {
+    pub fn next_move(&self, evaluator: &Evaluator, board: &Board, color: Color) -> NextMove {
         let left = board.count(None);
         if left <= self.exact_depth {
-            self.end_search(board, color, left)
+            self.end_search(evaluator, board, color, left, (-i32::MAX, i32::MAX))
         } else if left <= self.wld_depth {
-            self.wld_search(board, color, left)
+            self.end_search(evaluator, board, color, left, (-i32::MAX, 1))
         } else {
-            self.mid_search(board, color, self.mid_depth)
+            let (board, color) = if (color == Color::White && self.mid_depth % 2 == 0)
+                || (color == Color::Black && self.mid_depth % 2 == 1)
+            {
+                (board.reverse(), color.reverse())
+            } else {
+                (*board, color)
+            };
+            self.mid_search(evaluator, &board, color, self.mid_depth)
         }
     }
 
-    fn end_search(&self, board: &Board, color: Color, depth: u32) -> NextMove {
+    fn end_search(
+        &self,
+        evaluator: &Evaluator,
+        board: &Board,
+        color: Color,
+        depth: u32,
+        (alpha, beta): (i32, i32),
+    ) -> NextMove {
         let mut visited_nodes = 0;
         let (score, best_pos) = self.alpha_beta(
+            evaluator,
             board,
             color,
             depth,
-            (-i64::MAX, i64::MAX),
+            (alpha, beta),
             false,
             &mut visited_nodes,
         );
@@ -51,30 +66,20 @@ impl Com {
         }
     }
 
-    fn wld_search(&self, board: &Board, color: Color, depth: u32) -> NextMove {
+    fn mid_search(
+        &self,
+        evaluator: &Evaluator,
+        board: &Board,
+        color: Color,
+        depth: u32,
+    ) -> NextMove {
         let mut visited_nodes = 0;
         let (score, best_pos) = self.alpha_beta(
+            evaluator,
             board,
             color,
             depth,
-            (-i64::MAX, i64::MAX),
-            false,
-            &mut visited_nodes,
-        );
-        NextMove {
-            best_pos,
-            visited_nodes,
-            score,
-        }
-    }
-
-    fn mid_search(&self, board: &Board, color: Color, depth: u32) -> NextMove {
-        let mut visited_nodes = 0;
-        let (score, best_pos) = self.alpha_beta(
-            board,
-            color,
-            depth,
-            (-i64::MAX, i64::MAX),
+            (-i32::MAX, i32::MAX),
             false,
             &mut visited_nodes,
         );
@@ -87,20 +92,18 @@ impl Com {
 
     fn alpha_beta(
         &self,
+        evaluator: &Evaluator,
         board: &Board,
         color: Color,
         depth: u32,
-        (mut alpha, beta): (i64, i64),
+        (mut alpha, beta): (i32, i32),
         in_pass: bool,
         visited_nodes: &mut u32,
-    ) -> (i64, Option<Pos>) {
-        fn evaluate(board: &Board, color: Color) -> i64 {
-            (board.count(Some(color)) as i64) - (board.count(Some(color.reverse())) as i64)
-        }
-
+    ) -> (i32, Option<Pos>) {
         if depth == 0 {
             *visited_nodes += 1;
-            return (evaluate(board, color), None);
+            let game_over = board.count(None) == 0;
+            return (evaluator.evaluate(board, color, game_over), None);
         }
 
         let mut has_candidate = false;
@@ -110,6 +113,7 @@ impl Com {
             let (_, flipped) = board.flipped(color, pos);
             let value = -self
                 .alpha_beta(
+                    evaluator,
                     &flipped,
                     color.reverse(),
                     depth - 1,
@@ -136,12 +140,13 @@ impl Com {
 
         if in_pass {
             *visited_nodes += 1;
-            return (evaluate(board, color), None);
+            return (evaluator.evaluate(board, color, true), None);
         }
 
         (
             -self
                 .alpha_beta(
+                    evaluator,
                     board,
                     color.reverse(),
                     depth,

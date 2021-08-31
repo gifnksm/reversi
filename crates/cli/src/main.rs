@@ -1,10 +1,15 @@
 use crate::{
     cli::Cli,
-    player::{Computer, Human, Player},
+    player::{Computer, ComputerLevel, Human, Player},
     traits::ColorExt,
 };
-use reversi_core::{Board, Color, Game, GameState};
-use std::{fmt, io};
+use reversi_core::{Board, Color, Evaluator, Game, GameState};
+use std::{
+    fmt,
+    fs::File,
+    io::{self, BufReader},
+    path::Path,
+};
 
 mod cli;
 mod player;
@@ -13,7 +18,7 @@ mod traits;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn main() -> Result<()> {
-    let board = Board::with_size(6, 6)?;
+    let board = Board::new();
     let game = Game::with_board(board);
     let black_player = choose_player(Color::Black)?;
     let white_player = choose_player(Color::White)?;
@@ -130,6 +135,36 @@ fn choose_player(color: Color) -> Result<Box<dyn Player>> {
 
     match kind {
         PlayerKind::Human => Ok(Box::new(Human::new(color))),
-        PlayerKind::Computer => Ok(Box::new(Computer::new(color))),
+        PlayerKind::Computer => {
+            let data_path = Path::new("dat").join("evaluator.dat");
+            let evaluator = if data_path.exists() {
+                let file = File::open(data_path)?;
+                let buf = BufReader::new(file);
+                Evaluator::read(buf)?
+            } else {
+                eprintln!("Evaluator data not found: {}", data_path.display());
+                Evaluator::new()
+            };
+
+            let candidates = &[
+                (ComputerLevel::Level1, "Level 1"),
+                (ComputerLevel::Level2, "Level 2"),
+                (ComputerLevel::Level3, "Level 3"),
+                (ComputerLevel::Level4, "Level 4"),
+            ];
+            let level = read_input(
+                &format!("Choose {} player level", color.mark()),
+                Some(ComputerLevel::Level4),
+                candidates,
+                |s| match s {
+                    "1" => Ok(ComputerLevel::Level1),
+                    "2" => Ok(ComputerLevel::Level2),
+                    "3" => Ok(ComputerLevel::Level3),
+                    "4" => Ok(ComputerLevel::Level4),
+                    _ => Err(format!("Invalid player level: {}", s).into()),
+                },
+            )?;
+            Ok(Box::new(Computer::new(color, evaluator, level)))
+        }
     }
 }

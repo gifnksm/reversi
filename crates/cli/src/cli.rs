@@ -1,5 +1,5 @@
 use crate::{player::Player, traits::ColorExt, Result};
-use reversi_core::{Board, Cell, Color, Game, GameState, Pos};
+use reversi_core::{Board, Color, Game, GameState, Pos};
 
 pub struct Cli {
     game: Game,
@@ -46,20 +46,19 @@ impl Cli {
 
         eprintln!();
         eprint!(" ");
-        for ch in ('A'..).take(board.width() as usize) {
+        for ch in ('A'..).take(Board::SIZE as usize) {
             eprint!(" {}", ch);
         }
         eprintln!();
 
-        for y in 0..board.height() {
+        for y in 0..Board::SIZE {
             eprint!("{}", y + 1);
-            for x in 0..board.width() {
+            for x in 0..Board::SIZE {
                 let pos = Pos::from_xy(x, y).unwrap();
                 eprint!(" ");
                 match board.get(pos) {
-                    Cell::Disk(color) => eprint!("{}", color.mark()),
-                    Cell::Wall => eprint!("_"),
-                    Cell::Empty => {
+                    Some(color) => eprint!("{}", color.mark()),
+                    None => {
                         let ch = match color {
                             Some(color) if board.can_flip(color, pos) => '*',
                             _ => '.',
