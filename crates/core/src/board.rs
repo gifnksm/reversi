@@ -1,7 +1,6 @@
-pub use self::{color::*, direction::*, pos::*};
+pub use self::{color::*, pos::*};
 
 mod color;
-mod direction;
 mod pos;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -74,8 +73,8 @@ impl Board {
         };
         let mut count = 0;
         let mut flip_set = PosSet::new();
-        for dir in Direction::ALL {
-            let (c, s) = line_flipped(self_set, other_set, pos, dir);
+        for &points in pos.flip_lines() {
+            let (c, s) = line_flipped(self_set, other_set, points);
             count += c;
             flip_set |= s;
         }
@@ -96,8 +95,9 @@ impl Board {
             Color::Black => (self.black, self.white),
             Color::White => (self.white, self.black),
         };
-        Direction::ALL.iter().any(|dir| {
-            let (c, _m) = line_flipped(&self_set, &other_set, pos, *dir);
+
+        pos.flip_lines().iter().any(|points| {
+            let (c, _m) = line_flipped(&self_set, &other_set, points);
             c > 0
         })
     }
@@ -118,14 +118,9 @@ impl Board {
     }
 }
 
-fn line_flipped(
-    self_set: &PosSet,
-    other_set: &PosSet,
-    origin: Pos,
-    dir: Direction,
-) -> (usize, PosSet) {
+fn line_flipped(self_set: &PosSet, other_set: &PosSet, points: &[Pos]) -> (usize, PosSet) {
     let mut flipped = PosSet::new();
-    for (count, pos) in origin.line(dir).enumerate() {
+    for (count, pos) in points.iter().copied().enumerate() {
         if other_set.contains(&pos) {
             flipped |= pos;
             continue;

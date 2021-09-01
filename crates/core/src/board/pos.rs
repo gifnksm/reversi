@@ -1,11 +1,6 @@
-use super::{Board, Direction};
+use super::Board;
 use crate::traits::{IterOnes, Ones};
-use std::{
-    fmt,
-    iter::{self, FromIterator},
-    num::ParseIntError,
-    str::FromStr,
-};
+use std::{fmt, iter::FromIterator, num::ParseIntError, str::FromStr};
 
 const AVAILABLE_BITS: u128 = 0b0111111110 << (Board::SIZE + 2)
     | 0b0111111110 << (2 * (Board::SIZE + 2))
@@ -139,11 +134,12 @@ impl Pos {
         self.0 % (Board::SIZE + 2) - 1
     }
 
-    pub fn line(&self, dir: Direction) -> impl Iterator<Item = Self> {
-        let amt = dir.to_add_amount();
-        iter::successors(Some(*self), move |p| Self::from_index(p.0 + amt)).skip(1)
+    pub(crate) fn flip_lines(&self) -> &[&[Pos]] {
+        flip_lines(*self)
     }
 }
+
+include!(concat!(env!("OUT_DIR"), "/pos_lines.rs"));
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PosSet(u128);
@@ -167,8 +163,23 @@ impl PosSet {
 
     pub fn neighbors(&self) -> PosSet {
         let mut neighbor_bits = 0;
-        for dir in Direction::ALL {
-            let amt = dir.to_add_amount();
+        let up = -1;
+        let down = 1;
+        let left = -(Board::SIZE + 2);
+        let right = Board::SIZE + 2;
+
+        let amts = [
+            up + left,
+            up,
+            up + right,
+            left,
+            right,
+            down + left,
+            down,
+            down + right,
+        ];
+
+        for amt in amts {
             if amt < 0 {
                 neighbor_bits |= self.0 >> (-amt);
             } else {
@@ -268,25 +279,6 @@ impl FromIterator<Pos> for PosSet {
     }
 }
 
-impl Direction {
-    fn to_add_amount(self) -> i8 {
-        let up = -1;
-        let down = 1;
-        let left = -(Board::SIZE + 2);
-        let right = Board::SIZE + 2;
-        match self {
-            Self::UpLeft => up + left,
-            Self::Up => up,
-            Self::UpRight => up + right,
-            Self::Left => left,
-            Self::Right => right,
-            Self::DownLeft => down + left,
-            Self::Down => down,
-            Self::DownRight => down + right,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -339,27 +331,5 @@ mod tests {
         let mut cloned = sorted;
         cloned.sort();
         assert_eq!(sorted, cloned);
-    }
-
-    #[test]
-    fn line() {
-        use Direction::*;
-        use Pos as P;
-
-        let origin = P::D5;
-        let lines: &[(_, &[_])] = &[
-            (UpLeft, &[P::C4, P::B3, P::A2]),
-            (Up, &[P::D4, P::D3, P::D2, P::D1]),
-            (UpRight, &[P::E4, P::F3, P::G2, P::H1]),
-            (Left, &[P::C5, P::B5, P::A5]),
-            (Right, &[P::E5, P::F5, P::G5, P::H5]),
-            (DownLeft, &[P::C6, P::B7, P::A8]),
-            (Down, &[P::D6, P::D7, P::D8]),
-            (DownRight, &[P::E6, P::F7, P::G8]),
-        ];
-
-        for (dir, pos) in lines {
-            assert!(origin.line(*dir).eq(pos.iter().copied()));
-        }
     }
 }
