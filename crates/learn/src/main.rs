@@ -51,10 +51,10 @@ impl Summary {
         let progress = f64::from(current_iteration) / f64::from(total_iteration);
 
         eprintln!(
-            "{:8} / {:8} ({:.3}%) (Estimated: {} / {}) ({} nodes, {:.3} sec, {:.2} kNPs)",
+            "{:8} / {:8} ({:5.1}%) (Estimated: {} / {}) ({} nodes, {:.3} sec, {:.2} kNPs)",
             current_iteration,
             total_iteration,
-            progress,
+            progress * 100.0,
             DurationDisplay(elapsed),
             DurationDisplay(elapsed.div_f64(progress)),
             self.interval_visited_nodes,
