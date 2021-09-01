@@ -2,15 +2,6 @@ use super::Board;
 use crate::traits::{IterOnes, Ones};
 use std::{fmt, iter::FromIterator, num::ParseIntError, str::FromStr};
 
-const AVAILABLE_BITS: u128 = 0b0111111110 << (Board::SIZE + 2)
-    | 0b0111111110 << (2 * (Board::SIZE + 2))
-    | 0b0111111110 << (3 * (Board::SIZE + 2))
-    | 0b0111111110 << (4 * (Board::SIZE + 2))
-    | 0b0111111110 << (5 * (Board::SIZE + 2))
-    | 0b0111111110 << (6 * (Board::SIZE + 2))
-    | 0b0111111110 << (7 * (Board::SIZE + 2))
-    | 0b0111111110 << (8 * (Board::SIZE + 2));
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Pos(i8);
 
@@ -108,14 +99,14 @@ impl Pos {
 
     pub const fn from_xy(x: i8, y: i8) -> Option<Self> {
         if 0 <= x && x < Board::SIZE && 0 <= y && y < Board::SIZE {
-            Some(Self((x + 1) * (Board::SIZE + 2) + (y + 1)))
+            Some(Self(x * Board::SIZE + y))
         } else {
             None
         }
     }
 
     const fn from_index(index: i8) -> Option<Self> {
-        if (1 << index) & AVAILABLE_BITS != 0 {
+        if 0 <= index && index < (Board::SIZE * Board::SIZE) {
             Some(Self(index))
         } else {
             None
@@ -127,11 +118,11 @@ impl Pos {
     }
 
     const fn x(&self) -> i8 {
-        self.0 / (Board::SIZE + 2) - 1
+        self.0 / Board::SIZE
     }
 
     const fn y(&self) -> i8 {
-        self.0 % (Board::SIZE + 2) - 1
+        self.0 % Board::SIZE
     }
 
     pub(crate) fn flip_lines(&self) -> &[&[Pos]] {
@@ -142,7 +133,7 @@ impl Pos {
 include!(concat!(env!("OUT_DIR"), "/pos_lines.rs"));
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct PosSet(u128);
+pub struct PosSet(u64);
 
 impl PosSet {
     pub fn new() -> Self {
@@ -161,12 +152,12 @@ impl PosSet {
         self.0 & pos.bit().0 != 0
     }
 
-    pub fn neighbors(&self) -> PosSet {
+    pub(crate) fn neighbors(&self) -> PosSet {
         let mut neighbor_bits = 0;
         let up = -1;
         let down = 1;
-        let left = -(Board::SIZE + 2);
-        let right = Board::SIZE + 2;
+        let left = -Board::SIZE;
+        let right = Board::SIZE;
 
         let amts = [
             up + left,
@@ -186,7 +177,7 @@ impl PosSet {
                 neighbor_bits |= self.0 << amt;
             }
         }
-        Self(neighbor_bits & AVAILABLE_BITS)
+        Self(neighbor_bits)
     }
 }
 
@@ -194,7 +185,7 @@ impl std::ops::Not for PosSet {
     type Output = Self;
 
     fn not(self) -> Self::Output {
-        Self(!self.0 & AVAILABLE_BITS)
+        Self(!self.0)
     }
 }
 
@@ -258,7 +249,7 @@ impl IntoIterator for PosSet {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct PosSetIter(Ones<u128>);
+pub struct PosSetIter(Ones<u64>);
 
 impl Iterator for PosSetIter {
     type Item = Pos;
@@ -291,7 +282,6 @@ mod tests {
                 ava_bits |= Pos::from_xy(x, y).unwrap().bit();
             }
         }
-        assert_eq!(ava_bits.0, AVAILABLE_BITS);
     }
 
     #[test]

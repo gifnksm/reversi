@@ -2,18 +2,18 @@ pub trait IterOnes: Sized {
     fn iter_ones(&self) -> Ones<Self>;
 }
 
-impl IterOnes for u128 {
-    fn iter_ones(&self) -> Ones<Self> {
-        Ones(*self)
-    }
-}
-
 #[derive(Debug, Clone, Copy)]
 pub struct Ones<T>(T);
 
 macro_rules! impl_ones {
     ($($ty:ty),* $(,)?) => {
         $(
+            impl IterOnes for $ty {
+                fn iter_ones(&self) -> Ones<Self> {
+                    Ones(*self)
+                }
+            }
+
             impl Iterator for Ones<$ty> {
                 type Item = u32;
 
@@ -38,7 +38,7 @@ mod test {
 
     #[test]
     fn iter_ones() {
-        (0b10101).iter_ones().eq([0, 2, 4]);
-        0.iter_ones().eq([]);
+        (0b10101u8).iter_ones().eq([0, 2, 4]);
+        0u8.iter_ones().eq([]);
     }
 }
