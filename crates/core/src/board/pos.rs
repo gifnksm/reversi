@@ -17,7 +17,7 @@ const AVAILABLE_BITS: u128 = 0b0111111110 << (Board::SIZE + 2)
     | 0b0111111110 << (8 * (Board::SIZE + 2));
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Pos(i32);
+pub struct Pos(i8);
 
 impl fmt::Debug for Pos {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -52,7 +52,7 @@ pub enum ParsePosError {
     #[error("cannot parse `{0}` as number: `{1}`")]
     ParseInt(String, ParseIntError),
     #[error("invalid pos `{0}{1}`")]
-    InvalidPos(char, i32),
+    InvalidPos(char, i8),
 }
 
 impl FromStr for Pos {
@@ -70,10 +70,10 @@ impl FromStr for Pos {
         })?;
         let num = cs
             .as_str()
-            .parse::<i32>()
+            .parse::<i8>()
             .map_err(|e| ParsePosError::ParseInt(cs.as_str().into(), e))?;
 
-        let x = (alpha as u8 - b'A') as i32;
+        let x = (alpha as u8 - b'A') as i8;
         let y = num - 1;
         Pos::from_xy(x, y).ok_or_else(|| Self::Err::InvalidPos(alpha, num))
     }
@@ -111,7 +111,7 @@ impl Pos {
         H5: (7, 4), H6: (7, 5), H7: (7, 6), H8: (7, 7),
     }
 
-    pub const fn from_xy(x: i32, y: i32) -> Option<Self> {
+    pub const fn from_xy(x: i8, y: i8) -> Option<Self> {
         if 0 <= x && x < Board::SIZE && 0 <= y && y < Board::SIZE {
             Some(Self((x + 1) * (Board::SIZE + 2) + (y + 1)))
         } else {
@@ -119,7 +119,7 @@ impl Pos {
         }
     }
 
-    const fn from_index(index: i32) -> Option<Self> {
+    const fn from_index(index: i8) -> Option<Self> {
         if (1 << index) & AVAILABLE_BITS != 0 {
             Some(Self(index))
         } else {
@@ -131,11 +131,11 @@ impl Pos {
         PosSet(1 << self.0)
     }
 
-    pub const fn x(&self) -> i32 {
+    const fn x(&self) -> i8 {
         self.0 / (Board::SIZE + 2) - 1
     }
 
-    pub const fn y(&self) -> i32 {
+    const fn y(&self) -> i8 {
         self.0 % (Board::SIZE + 2) - 1
     }
 
@@ -254,7 +254,7 @@ impl Iterator for PosSetIter {
 
     fn next(&mut self) -> Option<Self::Item> {
         let idx = self.0.next()?;
-        Pos::from_index(idx as i32)
+        Pos::from_index(idx as i8)
     }
 }
 
@@ -269,7 +269,7 @@ impl FromIterator<Pos> for PosSet {
 }
 
 impl Direction {
-    fn to_add_amount(self) -> i32 {
+    fn to_add_amount(self) -> i8 {
         let up = -1;
         let down = 1;
         let left = -(Board::SIZE + 2);
@@ -325,7 +325,7 @@ mod tests {
                 assert_eq!(p.y(), y);
             }
         }
-        fn to_xy(pos: Pos) -> (i32, i32) {
+        fn to_xy(pos: Pos) -> (i8, i8) {
             (pos.x(), pos.y())
         }
         assert_eq!(to_xy(Pos::A1), (0, 0));

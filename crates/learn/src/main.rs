@@ -217,7 +217,7 @@ fn update(updater: &mut WeightUpdater, board: &Board, history: &mut Vec<(Board, 
         board = history.pop().unwrap().0;
     }
 
-    for _ in (board.count(None) as i32)..(Board::SIZE * Board::SIZE - 12) {
+    for _ in (board.count(None) as i8)..(Board::SIZE * Board::SIZE - 12) {
         let (board, color) = history.pop().unwrap();
         if color == Color::Black {
             updater.update(&board, result);

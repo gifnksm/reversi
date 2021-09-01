@@ -17,7 +17,7 @@ impl Default for Board {
 }
 
 impl Board {
-    pub const SIZE: i32 = 8;
+    pub const SIZE: i8 = 8;
 
     pub fn new() -> Self {
         Self {
