@@ -108,13 +108,12 @@ impl Com {
 
         let mut has_candidate = false;
         let mut best_pos = None;
-        for pos in board.flip_candidates(color) {
+        for (pos, board) in board.all_flipped(color) {
             has_candidate = true;
-            let (_, flipped) = board.flipped(color, pos);
             let value = -self
                 .alpha_beta(
                     evaluator,
-                    &flipped,
+                    &board,
                     color.reverse(),
                     depth - 1,
                     (-beta, -alpha),

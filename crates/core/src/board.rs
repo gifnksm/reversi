@@ -86,6 +86,18 @@ impl Board {
         (count, res)
     }
 
+    pub fn all_flipped(&self, color: Color) -> impl Iterator<Item = (Pos, Board)> + '_ {
+        let other_set = match color {
+            Color::Black => self.white,
+            Color::White => self.black,
+        };
+        let candidates = !(self.black | self.white) & other_set.neighbors();
+        candidates.into_iter().filter_map(move |pos| {
+            let (cnt, board) = self.flipped(color, pos);
+            (cnt > 0).then(|| (pos, board))
+        })
+    }
+
     pub fn can_flip(&self, color: Color, pos: Pos) -> bool {
         if (self.black | self.white).contains(&pos) {
             return false;
