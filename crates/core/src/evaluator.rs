@@ -7,8 +7,8 @@ use Pos as P;
 
 const UPDATE_RATIO: f64 = 0.003;
 
-const DISK_VALUE: i32 = 1000;
-const MAX_PATTERN_VALUE: i32 = DISK_VALUE * 20;
+const DISK_VALUE: i16 = 1000;
+const MAX_PATTERN_VALUE: i16 = DISK_VALUE * 20;
 
 const POW_3_0: usize = 3usize.pow(0);
 const POW_3_1: usize = 3usize.pow(1);
@@ -54,26 +54,26 @@ impl Pattern {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Weight {
     #[serde(with = "BigArray")]
-    line4: [i32; Pattern::Line4.size()],
+    line4: [i16; Pattern::Line4.size()],
     #[serde(with = "BigArray")]
-    line3: [i32; Pattern::Line3.size()],
+    line3: [i16; Pattern::Line3.size()],
     #[serde(with = "BigArray")]
-    line2: [i32; Pattern::Line2.size()],
+    line2: [i16; Pattern::Line2.size()],
     #[serde(with = "BigArray")]
-    diag8: [i32; Pattern::Diag8.size()],
+    diag8: [i16; Pattern::Diag8.size()],
     #[serde(with = "BigArray")]
-    diag7: [i32; Pattern::Diag7.size()],
+    diag7: [i16; Pattern::Diag7.size()],
     #[serde(with = "BigArray")]
-    diag6: [i32; Pattern::Diag6.size()],
+    diag6: [i16; Pattern::Diag6.size()],
     #[serde(with = "BigArray")]
-    diag5: [i32; Pattern::Diag5.size()],
+    diag5: [i16; Pattern::Diag5.size()],
     #[serde(with = "BigArray")]
-    diag4: [i32; Pattern::Diag4.size()],
+    diag4: [i16; Pattern::Diag4.size()],
     #[serde(with = "BigArray")]
-    edge: [i32; Pattern::Edge.size()],
+    edge: [i16; Pattern::Edge.size()],
     #[serde(with = "BigArray")]
-    corner: [i32; Pattern::Corner.size()],
-    parity: [i32; Pattern::Parity.size()],
+    corner: [i16; Pattern::Corner.size()],
+    parity: [i16; Pattern::Parity.size()],
 }
 
 impl Default for Weight {
@@ -195,7 +195,7 @@ impl Evaluator {
 
     pub fn evaluate(&self, board: &Board, color: Color, game_over: bool) -> i32 {
         if game_over {
-            return DISK_VALUE
+            return i32::from(DISK_VALUE)
                 * ((board.count(Some(color)) as i32)
                     - (board.count(Some(color.reverse())) as i32));
         }
@@ -206,9 +206,9 @@ impl Evaluator {
     fn compute_value(&self, board: &Board) -> i32 {
         let mut res = 0;
 
-        fn value(board: &Board, weight: &[i32], pos: &[Pos]) -> i32 {
+        fn value(board: &Board, weight: &[i16], pos: &[Pos]) -> i32 {
             assert_eq!(weight.len(), 3usize.pow(pos.len() as u32));
-            weight[board_index(board, pos)]
+            i32::from(weight[board_index(board, pos)])
         }
 
         let list: &[(&[_], _)] = &[
@@ -230,7 +230,7 @@ impl Evaluator {
             }
         }
 
-        res += self.weight.parity[board_parity_index(board)];
+        res += i32::from(self.weight.parity[board_parity_index(board)]);
 
         res
     }
@@ -259,9 +259,7 @@ impl WeightUpdater {
                 *value += i % 3 * coeff;
                 i /= 3;
             }
-            if *value >= i {
-                *value = i;
-            }
+            *value = usize::min(i, *value);
         }
 
         let corner_coeff = [
@@ -272,9 +270,7 @@ impl WeightUpdater {
                 *value += i % 3 * coeff;
                 i /= 3;
             }
-            if *value >= i {
-                *value = i;
-            }
+            *value = usize::min(i, *value);
         }
 
         res
@@ -285,8 +281,12 @@ impl WeightUpdater {
     }
 
     pub fn update(&mut self, board: &Board, value: i32) {
-        fn update_pattern(weight: &mut [i32], idx: usize, mirror_idx: Option<usize>, diff: i32) {
-            weight[idx] = i32::clamp(weight[idx] + diff, -MAX_PATTERN_VALUE, MAX_PATTERN_VALUE);
+        fn update_pattern(weight: &mut [i16], idx: usize, mirror_idx: Option<usize>, diff: i32) {
+            weight[idx] = i32::clamp(
+                i32::from(weight[idx]) + diff,
+                i32::from(-MAX_PATTERN_VALUE),
+                i32::from(MAX_PATTERN_VALUE),
+            ) as i16;
             if let Some(mirror_idx) = mirror_idx {
                 weight[mirror_idx] = weight[idx];
             }
