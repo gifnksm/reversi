@@ -9,6 +9,6 @@ name = "reversi-learn"
 path = "src/main.rs"
 
 [dependencies]
-argh = "0.1.5"
+argh = "0.1.6"
 rand = "0.8.4"
 reversi-core = { path = "../core" }
