@@ -258,7 +258,20 @@ impl Iterator for PosSetIter {
         let idx = self.0.next()?;
         Pos::from_index(idx as i8)
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.0.size_hint()
+    }
 }
+
+impl DoubleEndedIterator for PosSetIter {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let idx = self.0.next_back()?;
+        Pos::from_index(idx as i8)
+    }
+}
+
+impl ExactSizeIterator for PosSetIter {}
 
 impl FromIterator<Pos> for PosSet {
     fn from_iter<T: IntoIterator<Item = Pos>>(iter: T) -> Self {

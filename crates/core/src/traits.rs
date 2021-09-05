@@ -6,7 +6,7 @@ pub trait IterOnes: Sized {
 pub struct Ones<T>(T);
 
 macro_rules! impl_ones {
-    ($($ty:ty),* $(,)?) => {
+    ($($ty:ident),* $(,)?) => {
         $(
             impl IterOnes for $ty {
                 fn iter_ones(&self) -> Ones<Self> {
@@ -26,7 +26,26 @@ macro_rules! impl_ones {
                     self.0 &= !bit;
                     Some(idx)
                 }
+
+                fn size_hint(&self) -> (usize, Option<usize>) {
+                    let count = self.0.count_ones() as usize;
+                    (count, Some(count))
+                }
             }
+
+            impl DoubleEndedIterator for Ones<$ty> {
+                fn next_back(&mut self) -> Option<Self::Item> {
+                    if self.0 == 0 {
+                        return None;
+                    }
+                    let idx = $ty::BITS - self.0.leading_zeros() - 1;
+                    let bit = 1 << idx;
+                    self.0 &= !bit;
+                    Some(idx)
+                }
+            }
+
+            impl ExactSizeIterator for Ones<$ty> {}
         )*
     };
 }
@@ -39,6 +58,8 @@ mod test {
     #[test]
     fn iter_ones() {
         (0b10101u8).iter_ones().eq([0, 2, 4]);
+        (0b10101u8).iter_ones().rev().eq([4, 2, 0]);
         0u8.iter_ones().eq([]);
+        0u8.iter_ones().rev().eq([]);
     }
 }
