@@ -128,6 +128,10 @@ impl Board {
     pub fn can_play(&self, color: Color) -> bool {
         self.flip_candidates(color).next().is_some()
     }
+
+    pub fn game_over(&self) -> bool {
+        self.count(None) == 0 || (!self.can_play(Color::Black) && !self.can_play(Color::White))
+    }
 }
 
 fn line_flipped(self_set: &PosSet, other_set: &PosSet, points: &[Pos]) -> (usize, PosSet) {

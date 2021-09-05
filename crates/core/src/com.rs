@@ -102,8 +102,7 @@ impl Com {
     ) -> (i32, Option<Pos>) {
         if depth == 0 {
             *visited_nodes += 1;
-            let game_over = board.count(None) == 0;
-            return (evaluator.evaluate(board, color, game_over), None);
+            return (evaluator.evaluate(board, color, board.game_over()), None);
         }
 
         let mut has_candidate = false;
