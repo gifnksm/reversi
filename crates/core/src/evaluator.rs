@@ -5,9 +5,23 @@ use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
 use Pos as P;
 
-const UPDATE_RATIO: f64 = 0.003;
-
 const DISK_VALUE: i16 = 1000;
+
+pub trait Evaluate {
+    fn evaluate(&self, board: &Board, color: Color, game_over: bool) -> i32;
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct CountEvaluator {}
+
+impl Evaluate for CountEvaluator {
+    fn evaluate(&self, board: &Board, color: Color, _game_over: bool) -> i32 {
+        i32::from(DISK_VALUE)
+            * ((board.count(Some(color)) as i32) - (board.count(Some(color.reverse())) as i32))
+    }
+}
+
+const UPDATE_RATIO: f64 = 0.003;
 const MAX_PATTERN_VALUE: i16 = DISK_VALUE * 20;
 
 const POW_3_0: usize = 3usize.pow(0);
@@ -175,32 +189,30 @@ const CORNER_POS: &[&[Pos]] = &[
     &[P::H8, P::G8, P::F8, P::H7, P::G7, P::F7, P::H6, P::G6],
 ];
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
-pub struct Evaluator {
+#[derive(Debug, Default, Clone)]
+pub struct WeightEvaluator {
+    count_evaluator: CountEvaluator,
     weight: Box<Weight>,
 }
 
-impl Evaluator {
+impl WeightEvaluator {
     pub fn new() -> Self {
         Self::default()
     }
 
+    fn with_weight(weight: Box<Weight>) -> Self {
+        Self {
+            weight,
+            ..Default::default()
+        }
+    }
+
     pub fn read(reader: impl Read) -> bincode::Result<Self> {
-        bincode::deserialize_from(reader)
+        Ok(Self::with_weight(bincode::deserialize_from(reader)?))
     }
 
     pub fn write(&self, writer: impl Write) -> bincode::Result<()> {
-        bincode::serialize_into(writer, self)
-    }
-
-    pub fn evaluate(&self, board: &Board, color: Color, game_over: bool) -> i32 {
-        if game_over {
-            return i32::from(DISK_VALUE)
-                * ((board.count(Some(color)) as i32)
-                    - (board.count(Some(color.reverse())) as i32));
-        }
-
-        self.compute_value(board)
+        bincode::serialize_into(writer, &self.weight)
     }
 
     fn compute_value(&self, board: &Board) -> i32 {
@@ -236,15 +248,25 @@ impl Evaluator {
     }
 }
 
+impl Evaluate for WeightEvaluator {
+    fn evaluate(&self, board: &Board, color: Color, game_over: bool) -> i32 {
+        if game_over {
+            self.count_evaluator.evaluate(board, color, game_over)
+        } else {
+            self.compute_value(board)
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct WeightUpdater {
-    evaluator: Evaluator,
+    evaluator: WeightEvaluator,
     mirror_line: Box<[usize; POW_3_8]>,
     mirror_corner: Box<[usize; POW_3_8]>,
 }
 
 impl WeightUpdater {
-    pub fn new(evaluator: Evaluator) -> Self {
+    pub fn new(evaluator: WeightEvaluator) -> Self {
         let mut res = Self {
             evaluator,
             mirror_line: Box::new([0; POW_3_8]),
@@ -276,7 +298,7 @@ impl WeightUpdater {
         res
     }
 
-    pub fn evaluator(&self) -> &Evaluator {
+    pub fn evaluator(&self) -> &WeightEvaluator {
         &self.evaluator
     }
 

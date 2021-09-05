@@ -1,4 +1,4 @@
-use crate::{Board, Color, Evaluator, Pos};
+use crate::{Board, Color, Evaluate, Pos};
 
 #[derive(Debug, Clone, Copy)]
 pub struct NextMove {
@@ -23,7 +23,7 @@ impl Com {
         }
     }
 
-    pub fn next_move(&self, evaluator: &Evaluator, board: &Board, color: Color) -> NextMove {
+    pub fn next_move(&self, evaluator: &impl Evaluate, board: &Board, color: Color) -> NextMove {
         let left = board.count(None);
         if left <= self.exact_depth {
             self.end_search(evaluator, board, color, left, (-i32::MAX, i32::MAX))
@@ -43,7 +43,7 @@ impl Com {
 
     fn end_search(
         &self,
-        evaluator: &Evaluator,
+        evaluator: &impl Evaluate,
         board: &Board,
         color: Color,
         depth: u32,
@@ -68,7 +68,7 @@ impl Com {
 
     fn mid_search(
         &self,
-        evaluator: &Evaluator,
+        evaluator: &impl Evaluate,
         board: &Board,
         color: Color,
         depth: u32,
@@ -92,7 +92,7 @@ impl Com {
 
     fn alpha_beta(
         &self,
-        evaluator: &Evaluator,
+        evaluator: &impl Evaluate,
         board: &Board,
         color: Color,
         depth: u32,

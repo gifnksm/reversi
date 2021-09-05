@@ -1,6 +1,6 @@
 use argh::FromArgs;
 use rand::{seq::IteratorRandom, Rng};
-use reversi_core::{Board, Color, Com, Evaluator, WeightUpdater};
+use reversi_core::{Board, Color, Com, Evaluate as _, WeightEvaluator, WeightUpdater};
 use std::{
     fmt,
     fs::File,
@@ -127,7 +127,7 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
-fn read_evaluator(args: &Args) -> Result<Evaluator, Error> {
+fn read_evaluator(args: &Args) -> Result<WeightEvaluator, Error> {
     let path = args
         .file
         .clone()
@@ -142,16 +142,16 @@ fn read_evaluator(args: &Args) -> Result<Evaluator, Error> {
 
     let evaluator = if let Some(file) = file {
         let buf = BufReader::new(file);
-        Evaluator::read(buf)?
+        WeightEvaluator::read(buf)?
     } else {
-        eprintln!("Evaluator data not found: {}", path.display());
-        Evaluator::new()
+        eprintln!("WeightEvaluator data not found: {}", path.display());
+        WeightEvaluator::new()
     };
 
     Ok(evaluator)
 }
 
-fn write_evaluator(args: &Args, evaluator: &Evaluator) -> Result<(), Error> {
+fn write_evaluator(args: &Args, evaluator: &WeightEvaluator) -> Result<(), Error> {
     let path = args
         .file
         .clone()
@@ -164,7 +164,7 @@ fn write_evaluator(args: &Args, evaluator: &Evaluator) -> Result<(), Error> {
 
 fn play_game(
     rng: &mut impl Rng,
-    evaluator: &Evaluator,
+    evaluator: &WeightEvaluator,
     com: &Com,
     history: &mut Vec<(Board, Color)>,
     summary: &mut Summary,

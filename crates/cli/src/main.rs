@@ -3,7 +3,7 @@ use crate::{
     player::{Computer, ComputerLevel, Human, Player},
     traits::ColorExt,
 };
-use reversi_core::{Board, Color, Evaluator, Game, GameState};
+use reversi_core::{Board, Color, Game, GameState, WeightEvaluator};
 use std::{
     fmt,
     fs::File,
@@ -140,10 +140,10 @@ fn choose_player(color: Color) -> Result<Box<dyn Player>> {
             let evaluator = if data_path.exists() {
                 let file = File::open(data_path)?;
                 let buf = BufReader::new(file);
-                Evaluator::read(buf)?
+                WeightEvaluator::read(buf)?
             } else {
                 eprintln!("Evaluator data not found: {}", data_path.display());
-                Evaluator::new()
+                WeightEvaluator::new()
             };
 
             let candidates = &[

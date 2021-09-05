@@ -1,5 +1,5 @@
 use crate::{traits::ColorExt, Result};
-use reversi_core::{Board, Color, Com, Evaluator, NextMove, Pos};
+use reversi_core::{Board, Color, Com, NextMove, Pos, WeightEvaluator};
 use std::{
     fmt,
     time::{Duration, Instant},
@@ -69,14 +69,14 @@ impl fmt::Display for ComputerLevel {
 #[derive(Debug)]
 pub struct Computer {
     color: Color,
-    evaluator: Evaluator,
+    evaluator: WeightEvaluator,
     com: Com,
     total_thinking_time: Duration,
     total_visited_nodes: u64,
 }
 
 impl Computer {
-    pub fn new(color: Color, evaluator: Evaluator, level: ComputerLevel) -> Self {
+    pub fn new(color: Color, evaluator: WeightEvaluator, level: ComputerLevel) -> Self {
         let com = match level {
             ComputerLevel::Level1 => Com::new(2, 8, 10),
             ComputerLevel::Level2 => Com::new(4, 10, 12),
