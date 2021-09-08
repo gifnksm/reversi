@@ -50,7 +50,7 @@ impl Com {
         (alpha, beta): (i32, i32),
     ) -> NextMove {
         let mut visited_nodes = 0;
-        let (score, best_pos) = self.alpha_beta(
+        let (score, best_pos) = alpha_beta(
             evaluator,
             board,
             color,
@@ -74,7 +74,7 @@ impl Com {
         depth: u32,
     ) -> NextMove {
         let mut visited_nodes = 0;
-        let (score, best_pos) = self.alpha_beta(
+        let (score, best_pos) = alpha_beta(
             evaluator,
             board,
             color,
@@ -89,71 +89,203 @@ impl Com {
             score,
         }
     }
+}
 
-    fn alpha_beta(
-        &self,
-        evaluator: &impl Evaluate,
-        board: &Board,
-        color: Color,
-        depth: u32,
-        (mut alpha, beta): (i32, i32),
-        in_pass: bool,
-        visited_nodes: &mut u32,
-    ) -> (i32, Option<Pos>) {
-        if depth == 0 {
-            *visited_nodes += 1;
-            return (evaluator.evaluate(board, color, board.game_over()), None);
+fn alpha_beta(
+    evaluator: &impl Evaluate,
+    board: &Board,
+    color: Color,
+    depth: u32,
+    (mut alpha, beta): (i32, i32),
+    in_pass: bool,
+    visited_nodes: &mut u32,
+) -> (i32, Option<Pos>) {
+    if depth == 0 {
+        *visited_nodes += 1;
+        return (evaluator.evaluate(board, color, board.game_over()), None);
+    }
+
+    let mut has_candidate = false;
+    let mut best_pos = None;
+    for (pos, board) in board.all_flipped(color) {
+        has_candidate = true;
+        let value = -alpha_beta(
+            evaluator,
+            &board,
+            color.reverse(),
+            depth - 1,
+            (-beta, -alpha),
+            false,
+            visited_nodes,
+        )
+        .0;
+        if value > alpha {
+            alpha = value;
+            best_pos = Some((pos, value));
+            if alpha >= beta {
+                return (beta, None);
+            }
         }
+    }
 
-        let mut has_candidate = false;
-        let mut best_pos = None;
-        for (pos, board) in board.all_flipped(color) {
-            has_candidate = true;
-            let value = -self
-                .alpha_beta(
-                    evaluator,
-                    &board,
-                    color.reverse(),
-                    depth - 1,
-                    (-beta, -alpha),
-                    false,
-                    visited_nodes,
-                )
-                .0;
-            if value > alpha {
-                alpha = value;
-                best_pos = Some((pos, value));
-                if alpha >= beta {
-                    return (beta, None);
+    if let Some((pos, score)) = best_pos {
+        return (score, Some(pos));
+    }
+    if has_candidate {
+        return (alpha, None);
+    }
+
+    if in_pass {
+        *visited_nodes += 1;
+        return (evaluator.evaluate(board, color, true), None);
+    }
+
+    (
+        -alpha_beta(
+            evaluator,
+            board,
+            color.reverse(),
+            depth,
+            (-beta, -alpha),
+            true,
+            visited_nodes,
+        )
+        .0,
+        None,
+    )
+}
+
+#[cfg(test)]
+fn nega_max(
+    evaluator: &impl Evaluate,
+    board: &Board,
+    color: Color,
+    depth: u32,
+    in_pass: bool,
+    visited_nodes: &mut u32,
+) -> (i32, Option<Pos>) {
+    if depth == 0 {
+        *visited_nodes += 1;
+        return (evaluator.evaluate(board, color, board.game_over()), None);
+    }
+
+    let mut max = i32::MIN;
+    let mut has_candidate = false;
+    let mut best_pos = None;
+    for (pos, board) in board.all_flipped(color) {
+        has_candidate = true;
+        let value = -nega_max(
+            evaluator,
+            &board,
+            color.reverse(),
+            depth - 1,
+            false,
+            visited_nodes,
+        )
+        .0;
+        if value > max {
+            max = value;
+            best_pos = Some((pos, value));
+        }
+    }
+
+    if let Some((pos, score)) = best_pos {
+        return (score, Some(pos));
+    }
+    if has_candidate {
+        return (max, None);
+    }
+
+    if in_pass {
+        *visited_nodes += 1;
+        return (evaluator.evaluate(board, color, true), None);
+    }
+
+    (
+        -nega_max(
+            evaluator,
+            board,
+            color.reverse(),
+            depth,
+            true,
+            visited_nodes,
+        )
+        .0,
+        None,
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::CountEvaluator;
+
+    #[derive(Debug)]
+    struct DummyEvaluator(CountEvaluator);
+
+    impl Evaluate for DummyEvaluator {
+        fn evaluate(&self, board: &Board, color: Color, _game_over: bool) -> i32 {
+            let mut value = 0;
+            for y in 0..Board::SIZE {
+                for x in 0..Board::SIZE {
+                    let pos = Pos::from_xy(x, y).unwrap();
+                    if let Some(b_color) = board.get(pos) {
+                        if b_color == color {
+                            value += (x * Board::SIZE + y) as i32;
+                        } else {
+                            value -= (x * Board::SIZE + y) as i32;
+                        }
+                    }
+                }
+            }
+            value
+        }
+    }
+
+    #[test]
+    fn comp_com() {
+        let evaluator = DummyEvaluator(CountEvaluator::new());
+        let depth = 3;
+
+        let ab = |board, color| {
+            let mut visited_nodes = 0;
+            let pos = alpha_beta(
+                &evaluator,
+                &board,
+                color,
+                depth,
+                (-i32::MAX, i32::MAX),
+                false,
+                &mut visited_nodes,
+            );
+            (visited_nodes, pos)
+        };
+        let nb = |board, color| {
+            let mut visited_nodes = 0;
+            let pos = nega_max(&evaluator, &board, color, depth, false, &mut visited_nodes);
+            (visited_nodes, pos)
+        };
+
+        let mut board = Board::new();
+        let mut color = Color::Black;
+        let mut in_pass = false;
+        loop {
+            let (alpha_nodes, alpha_pos) = ab(board, color);
+            let (nega_nodes, nega_pos) = nb(board, color);
+            assert!(alpha_nodes <= nega_nodes);
+            assert_eq!(alpha_pos, nega_pos);
+            match alpha_pos.1 {
+                Some(pos) => {
+                    board = board.flipped(color, pos).1;
+                    color = color.reverse();
+                    in_pass = false;
+                }
+                None if in_pass => break,
+                None => {
+                    in_pass = true;
+                    color = color.reverse();
                 }
             }
         }
-
-        if let Some((pos, score)) = best_pos {
-            return (score, Some(pos));
-        }
-        if has_candidate {
-            return (alpha, None);
-        }
-
-        if in_pass {
-            *visited_nodes += 1;
-            return (evaluator.evaluate(board, color, true), None);
-        }
-
-        (
-            -self
-                .alpha_beta(
-                    evaluator,
-                    board,
-                    color.reverse(),
-                    depth,
-                    (-beta, -alpha),
-                    true,
-                    visited_nodes,
-                )
-                .0,
-            None,
-        )
     }
 }

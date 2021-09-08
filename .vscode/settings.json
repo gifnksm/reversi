@@ -6,6 +6,7 @@
         "bitor",
         "bitxor",
         "coeff",
+        "nega",
         "reversi",
         "thiserror"
     ]
