@@ -126,11 +126,11 @@ impl Pos {
     }
 
     pub(crate) fn flip_lines(&self) -> &[&[Pos]] {
-        flip_lines(*self)
+        flip_lines::flip_lines(*self)
     }
 }
 
-include!(concat!(env!("OUT_DIR"), "/pos_lines.rs"));
+include!(concat!(env!("OUT_DIR"), "/flip_lines.rs"));
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PosSet(u64);

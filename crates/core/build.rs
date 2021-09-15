@@ -7,6 +7,7 @@ use std::{
 
 const BOARD_SIZE: i8 = 8;
 
+type Error = Box<dyn std::error::Error>;
 type Pos = (i8, i8);
 
 fn pos_to_str((x, y): Pos) -> String {
@@ -18,13 +19,23 @@ fn pos_to_str((x, y): Pos) -> String {
     format!("{}{}", alpha, num)
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Error> {
     println!("cargo:rerun-if-changed=build.rs");
 
     let out_dir = std::env::var_os("OUT_DIR").unwrap();
-    let dest_path = Path::new(&out_dir).join("pos_lines.rs");
-    let file = File::create(&dest_path)?;
+
+    flip_lines(&mut File::create(
+        &Path::new(&out_dir).join("flip_lines.rs"),
+    )?)?;
+
+    Ok(())
+}
+
+fn flip_lines(file: &mut File) -> Result<(), Error> {
     let mut writer = BufWriter::new(file);
+
+    writeln!(writer, "mod flip_lines {{")?;
+    writeln!(writer, "    use crate::Pos;")?;
 
     for x in 0..BOARD_SIZE {
         for y in 0..BOARD_SIZE {
@@ -32,7 +43,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             writeln!(
                 writer,
-                "const FLIP_LINE_{}: &[&[Pos]] = &[",
+                "    const FLIP_LINE_{}: &[&[Pos]] = &[",
                 pos_to_str(pos)
             )?;
             for dy in [-1, 0, 1] {
@@ -53,29 +64,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                     writeln!(
                         writer,
-                        "  &[{}], // ({:2}, {:2})",
+                        "        &[{}], // ({:2}, {:2})",
                         points.join(", "),
                         dx,
                         dy
                     )?;
                 }
             }
-            writeln!(writer, "];")?;
+            writeln!(writer, "    ];")?;
         }
     }
 
     writeln!(
         writer,
-        "fn flip_lines(p: Pos) -> &'static [&'static [Pos]] {{"
+        "    pub(super) fn flip_lines(p: Pos) -> &'static [&'static [Pos]] {{"
     )?;
-    writeln!(writer, "    match p {{")?;
+    writeln!(writer, "        match p {{")?;
     for x in 0..BOARD_SIZE {
         for y in 0..BOARD_SIZE {
             let pos = pos_to_str((x, y));
-            writeln!(writer, "      Pos::{} => FLIP_LINE_{},", pos, pos)?;
+            writeln!(writer, "            Pos::{} => FLIP_LINE_{},", pos, pos)?;
         }
     }
-    writeln!(writer, "    _ => unreachable!()")?;
+    writeln!(writer, "            _ => unreachable!(),")?;
+    writeln!(writer, "        }}")?;
     writeln!(writer, "    }}")?;
     writeln!(writer, "}}")?;
 
