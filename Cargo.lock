@@ -140,16 +140,24 @@ dependencies = [
 name = "reversi-cli"
 version = "0.1.0"
 dependencies = [
+ "reversi-com",
  "reversi-core",
+]
+
+[[package]]
+name = "reversi-com"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "reversi-core",
+ "serde",
+ "serde-big-array",
 ]
 
 [[package]]
 name = "reversi-core"
 version = "0.1.0"
 dependencies = [
- "bincode",
- "serde",
- "serde-big-array",
  "thiserror",
 ]
 
@@ -159,6 +167,7 @@ version = "0.1.0"
 dependencies = [
  "argh",
  "rand",
+ "reversi-com",
  "reversi-core",
 ]
 

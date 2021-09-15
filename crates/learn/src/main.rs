@@ -1,6 +1,7 @@
 use argh::FromArgs;
 use rand::{seq::IteratorRandom, Rng};
-use reversi_core::{Board, Color, Com, Evaluate as _, WeightEvaluator, WeightUpdater};
+use reversi_com::{Com, Evaluate as _, WeightEvaluator, WeightUpdater};
+use reversi_core::{Board, Color};
 use std::{
     fmt,
     fs::File,

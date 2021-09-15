@@ -1,5 +1,6 @@
 use crate::{traits::ColorExt, Result};
-use reversi_core::{Board, Color, Com, NextMove, Pos, WeightEvaluator};
+use reversi_com::{Com, NextMove, WeightEvaluator};
+use reversi_core::{Board, Color, Pos};
 use std::{
     fmt,
     time::{Duration, Instant},

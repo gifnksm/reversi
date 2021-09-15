@@ -1,4 +1,5 @@
-use crate::{Board, Color, Evaluate, Pos};
+use crate::Evaluate;
+use reversi_core::{Board, Color, Pos};
 
 #[derive(Debug, Clone, Copy)]
 pub struct NextMove {

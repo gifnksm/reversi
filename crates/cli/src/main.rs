@@ -3,7 +3,8 @@ use crate::{
     player::{Computer, ComputerLevel, Human, Player},
     traits::ColorExt,
 };
-use reversi_core::{Board, Color, Game, GameState, WeightEvaluator};
+use reversi_com::WeightEvaluator;
+use reversi_core::{Board, Color, Game, GameState};
 use std::{
     fmt,
     fs::File,

@@ -1,7 +1,5 @@
-pub use self::{board::*, com::*, evaluator::*, game::*};
+pub use self::{board::*, game::*};
 
 mod board;
-mod com;
-mod evaluator;
 mod game;
 mod traits;

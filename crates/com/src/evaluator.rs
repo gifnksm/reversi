@@ -1,6 +1,6 @@
 use std::io::{Read, Write};
 
-use crate::{Board, Color, Pos};
+use reversi_core::{Board, Color, Pos};
 use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
 use Pos as P;
