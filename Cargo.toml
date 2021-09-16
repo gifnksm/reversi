@@ -1,2 +1,5 @@
 [workspace]
 members = ["crates/core", "crates/com", "crates/cli", "crates/learn"]
+
+[profile.release]
+lto = "thin"
