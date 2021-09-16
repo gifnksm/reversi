@@ -2,7 +2,7 @@ use std::{
     fs::File,
     io::{prelude::*, BufWriter},
     iter,
-    path::Path,
+    path::PathBuf,
 };
 
 const BOARD_SIZE: i8 = 8;
@@ -22,11 +22,8 @@ fn pos_to_str((x, y): Pos) -> String {
 fn main() -> Result<(), Error> {
     println!("cargo:rerun-if-changed=build.rs");
 
-    let out_dir = std::env::var_os("OUT_DIR").unwrap();
-
-    flip_lines(&mut File::create(
-        &Path::new(&out_dir).join("flip_lines.rs"),
-    )?)?;
+    let out_dir = PathBuf::from(std::env::var_os("OUT_DIR").unwrap());
+    flip_lines(&mut File::create(&out_dir.join("flip_lines.rs"))?)?;
 
     Ok(())
 }

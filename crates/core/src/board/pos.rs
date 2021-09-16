@@ -2,7 +2,7 @@ use super::Board;
 use crate::traits::{IterOnes, Ones};
 use std::{fmt, iter::FromIterator, num::ParseIntError, str::FromStr};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Pos(i8);
 
 impl fmt::Debug for Pos {
@@ -117,11 +117,11 @@ impl Pos {
         PosSet(1 << self.0)
     }
 
-    const fn x(&self) -> i8 {
+    pub const fn x(&self) -> i8 {
         self.0 / Board::SIZE
     }
 
-    const fn y(&self) -> i8 {
+    pub const fn y(&self) -> i8 {
         self.0 % Board::SIZE
     }
 
@@ -132,8 +132,20 @@ impl Pos {
 
 include!(concat!(env!("OUT_DIR"), "/flip_lines.rs"));
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PosSet(u64);
+
+impl fmt::Debug for PosSet {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        struct Dummy(PosSet);
+        impl fmt::Debug for Dummy {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.debug_list().entries(self.0).finish()
+            }
+        }
+        f.debug_tuple("PosSet").field(&Dummy(*self)).finish()
+    }
+}
 
 impl PosSet {
     pub fn new() -> Self {

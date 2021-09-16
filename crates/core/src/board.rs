@@ -3,7 +3,7 @@ pub use self::{color::*, pos::*};
 mod color;
 mod pos;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Board {
     black: PosSet,
     white: PosSet,
@@ -22,6 +22,13 @@ impl Board {
         Self {
             black: PosSet::new() | Pos::E4 | Pos::D5,
             white: PosSet::new() | Pos::D4 | Pos::E5,
+        }
+    }
+
+    pub fn empty() -> Self {
+        Self {
+            black: PosSet::new(),
+            white: PosSet::new(),
         }
     }
 
@@ -131,6 +138,40 @@ impl Board {
 
     pub fn game_over(&self) -> bool {
         self.count(None) == 0 || (!self.can_play(Color::Black) && !self.can_play(Color::White))
+    }
+
+    pub fn from_pattern_index(pattern: &[Pos], index: u16) -> Self {
+        let mut board = Self::empty();
+        let mut n = index;
+        for &pos in pattern {
+            match n % 3 {
+                0 => {}
+                1 => board.set(pos, Color::Black),
+                2 => board.set(pos, Color::White),
+                _ => unreachable!(),
+            }
+            n /= 3;
+            if n == 0 {
+                break;
+            }
+        }
+        debug_assert_eq!(board.pattern_index(pattern), index);
+        board
+    }
+
+    pub fn pattern_index(&self, pattern: &[Pos]) -> u16 {
+        let mut n = 0;
+        let mut bit = 1;
+        for pos in pattern {
+            n += bit
+                * match self.get(*pos) {
+                    None => 0,
+                    Some(Color::Black) => 1,
+                    Some(Color::White) => 2,
+                };
+            bit *= 3;
+        }
+        n
     }
 }
 
