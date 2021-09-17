@@ -137,7 +137,10 @@ impl Board {
     }
 
     pub fn game_over(&self) -> bool {
-        self.count(None) == 0 || (!self.can_play(Color::Black) && !self.can_play(Color::White))
+        self.count(None) == 0
+            || self.count(Some(Color::Black)) == 0
+            || self.count(Some(Color::White)) == 0
+            || (!self.can_play(Color::Black) && !self.can_play(Color::White))
     }
 
     pub fn from_pattern_index(pattern: &[Pos], index: u16) -> Self {
