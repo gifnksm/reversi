@@ -33,7 +33,7 @@ impl Board {
     }
 
     pub fn get(&self, pos: Pos) -> Option<Color> {
-        assert!((self.black & self.white).is_empty());
+        debug_assert!((self.black & self.white).is_empty());
         if self.black.contains(&pos) {
             Some(Color::Black)
         } else if self.white.contains(&pos) {
