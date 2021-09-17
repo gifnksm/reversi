@@ -21,7 +21,7 @@ trait Pattern<const N: usize, const M: usize> {
     const WEIGHT_COUNT: usize;
     const PATTERN_TO_WEIGHT_MAP: &'static [u16; M];
 
-    fn evaluate(board: &Board, weight: &[i16]) -> i32 {
+    fn evaluate(board: &Board, weight: &[i16; pattern::WEIGHT_COUNT]) -> i32 {
         let weight = &weight[Self::WEIGHT_INDEX_OFFSET..][..Self::WEIGHT_COUNT];
 
         let mut value = 0;
@@ -33,7 +33,7 @@ trait Pattern<const N: usize, const M: usize> {
         value
     }
 
-    fn update(board: &Board, weight: &mut [i16], diff: i32) {
+    fn update(board: &Board, weight: &mut [i16; pattern::WEIGHT_COUNT], diff: i32) {
         let weight = &mut weight[Self::WEIGHT_INDEX_OFFSET..][..Self::WEIGHT_COUNT];
 
         for pattern in Self::PATTERNS {
