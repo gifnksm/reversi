@@ -4,12 +4,15 @@ use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
 use std::io::{Read, Write};
 
-const UPDATE_RATIO: f64 = 0.003;
+const UPDATE_RATIO: f64 = 0.005;
 const MAX_PATTERN_VALUE: i16 = DISK_VALUE * 20;
+const FREQ_THRESHOLD: u8 = 10;
 
-fn update_value(value: &mut i16, diff: i32) {
+fn update_value(value: &mut i16, count: u8, diff_sum: i32) {
+    let updated =
+        i32::from(*value) + (((diff_sum / i32::from(count)) as f64) * UPDATE_RATIO) as i32;
     *value = i32::clamp(
-        i32::from(*value) + diff,
+        updated,
         i32::from(-MAX_PATTERN_VALUE),
         i32::from(MAX_PATTERN_VALUE),
     ) as i16;
@@ -33,13 +36,20 @@ trait Pattern<const N: usize, const M: usize> {
         value
     }
 
-    fn update(board: &Board, weight: &mut [i16; pattern::WEIGHT_COUNT], diff: i32) {
-        let weight = &mut weight[Self::WEIGHT_INDEX_OFFSET..][..Self::WEIGHT_COUNT];
+    fn update(
+        board: &Board,
+        count: &mut [u8; pattern::WEIGHT_COUNT],
+        sum: &mut [i32; pattern::WEIGHT_COUNT],
+        diff: i32,
+    ) {
+        let count = &mut count[Self::WEIGHT_INDEX_OFFSET..][..Self::WEIGHT_COUNT];
+        let sum = &mut sum[Self::WEIGHT_INDEX_OFFSET..][..Self::WEIGHT_COUNT];
 
         for pattern in Self::PATTERNS {
             let pattern_index = board.pattern_index(pattern);
             let weight_index = usize::from(Self::PATTERN_TO_WEIGHT_MAP[usize::from(pattern_index)]);
-            update_value(&mut weight[weight_index], diff);
+            count[weight_index] += 1;
+            sum[weight_index] += diff;
         }
     }
 }
@@ -117,11 +127,21 @@ impl Evaluate for WeightEvaluator {
 #[derive(Debug, Clone)]
 pub struct WeightUpdater {
     evaluator: WeightEvaluator,
+    pattern_count: [u8; pattern::WEIGHT_COUNT],
+    pattern_sum: [i32; pattern::WEIGHT_COUNT],
+    parity_count: [u8; 2],
+    parity_sum: [i32; 2],
 }
 
 impl WeightUpdater {
     pub fn new(evaluator: WeightEvaluator) -> Self {
-        Self { evaluator }
+        Self {
+            evaluator,
+            pattern_count: [0; pattern::WEIGHT_COUNT],
+            pattern_sum: [0; pattern::WEIGHT_COUNT],
+            parity_count: [0; 2],
+            parity_sum: [0; 2],
+        }
     }
 
     pub fn evaluator(&self) -> &WeightEvaluator {
@@ -129,13 +149,39 @@ impl WeightUpdater {
     }
 
     pub fn update(&mut self, board: &Board, value: i32) {
-        let diff =
-            (value as f64 - (self.evaluator.compute_value(board) as f64) * UPDATE_RATIO) as i32;
-        let w = &mut self.evaluator.weight;
-
+        let diff = value - self.evaluator.compute_value(board);
         for update in pattern::UPDATE_FNS {
-            update(board, &mut w.pattern, diff);
+            update(board, &mut self.pattern_count, &mut self.pattern_sum, diff);
         }
-        update_value(&mut w.parity[board_parity_index(board)], diff);
+
+        let parity_index = board_parity_index(board);
+        self.parity_count[parity_index] += 1;
+        self.parity_sum[parity_index] += diff;
+    }
+
+    pub fn flush(&mut self) {
+        fn inner<const N: usize>(count: &mut [u8; N], sum: &mut [i32; N], weight: &mut [i16; N]) {
+            count
+                .iter_mut()
+                .zip(sum)
+                .zip(weight)
+                .filter(|((count, _), _)| **count > FREQ_THRESHOLD)
+                .for_each(|((count, sum), weight)| {
+                    update_value(weight, *count, *sum);
+                    *count = 0;
+                    *sum = 0;
+                });
+        }
+
+        inner(
+            &mut self.pattern_count,
+            &mut self.pattern_sum,
+            &mut self.evaluator.weight.pattern,
+        );
+        inner(
+            &mut self.parity_count,
+            &mut self.parity_sum,
+            &mut self.evaluator.weight.parity,
+        );
     }
 }

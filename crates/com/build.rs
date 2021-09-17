@@ -74,7 +74,7 @@ fn main() -> Result<(), Error> {
 
     writeln!(
         &mut writer,
-        "pub(super) const UPDATE_FNS: &[fn (board: &Board, weight: &mut [i16; WEIGHT_COUNT], diff: i32)] = &["
+        "pub(super) const UPDATE_FNS: &[fn (board: &Board, count: &mut [u8; WEIGHT_COUNT], sum: &mut [i32; WEIGHT_COUNT], diff: i32)] = &["
     )?;
     for (name, _) in PATTERNS {
         writeln!(&mut writer, "{}::update,", name)?;

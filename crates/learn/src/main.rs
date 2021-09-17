@@ -117,6 +117,10 @@ fn main() -> Result<(), Error> {
         );
         update(&mut updater, &board, &mut history);
 
+        if (i + 1) % 10 == 0 {
+            updater.flush();
+        }
+
         if (i + 1) % 100 == 0 {
             write_evaluator(&args, updater.evaluator())?;
             summary.print_iteration(i + 1, args.num_iteration);
