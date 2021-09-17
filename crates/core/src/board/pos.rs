@@ -125,8 +125,61 @@ impl Pos {
         self.0 % Board::SIZE
     }
 
-    pub(crate) fn flip_lines(&self) -> &[&[Pos]] {
+    pub(crate) fn flip_lines(&self) -> &'static FlipLines {
         flip_lines::flip_lines(*self)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct FlipLines {
+    pos: Pos,
+    lines: &'static [&'static [Pos]],
+    self_mask: PosSet,
+    other_mask: PosSet,
+}
+
+impl FlipLines {
+    pub(crate) fn flipped(&self, self_set: &PosSet, other_set: &PosSet) -> (usize, PosSet) {
+        if (*self_set & self.self_mask).is_empty() || (*other_set & self.other_mask).is_empty() {
+            return (0, PosSet::new());
+        }
+
+        let mut count = 0;
+        let mut flipped = PosSet::new();
+        for &line in self.lines {
+            let (c, s) = Self::line_flipped(self_set, other_set, line);
+            count += c;
+            flipped |= s;
+        }
+        if count > 0 {
+            flipped |= self.pos;
+            count += 1;
+        }
+        (count, flipped)
+    }
+
+    pub(crate) fn can_flip(&self, self_set: &PosSet, other_set: &PosSet) -> bool {
+        !(*self_set & self.self_mask).is_empty()
+            && !(*other_set & self.other_mask).is_empty()
+            && self.lines.iter().any(|line| {
+                let (c, _f) = Self::line_flipped(self_set, other_set, line);
+                c > 0
+            })
+    }
+
+    fn line_flipped(self_set: &PosSet, other_set: &PosSet, line: &[Pos]) -> (usize, PosSet) {
+        let mut flipped = PosSet::new();
+        for (count, pos) in line.iter().copied().enumerate() {
+            if other_set.contains(&pos) {
+                flipped |= pos;
+                continue;
+            }
+            if self_set.contains(&pos) {
+                return (count, flipped);
+            }
+            break;
+        }
+        (0, PosSet::new())
     }
 }
 
@@ -148,8 +201,15 @@ impl fmt::Debug for PosSet {
 }
 
 impl PosSet {
-    pub fn new() -> Self {
-        Self::default()
+    pub const fn new() -> Self {
+        Self(0)
+    }
+
+    pub const fn from_slice(points: &[Pos]) -> Self {
+        match points {
+            [] => Self(0),
+            [a, b @ ..] => Self(Self::from_slice(b).0 | a.bit().0),
+        }
     }
 
     pub fn is_empty(&self) -> bool {

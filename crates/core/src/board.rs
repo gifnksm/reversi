@@ -78,17 +78,10 @@ impl Board {
             Color::Black => (&mut res.black, &mut res.white),
             Color::White => (&mut res.white, &mut res.black),
         };
-        let mut count = 0;
-        let mut flip_set = PosSet::new();
-        for &points in pos.flip_lines() {
-            let (c, s) = line_flipped(self_set, other_set, points);
-            count += c;
-            flip_set |= s;
-        }
+        let (count, flipped) = pos.flip_lines().flipped(self_set, other_set);
         if count > 0 {
-            *self_set |= flip_set | pos;
-            *other_set &= !flip_set;
-            count += 1;
+            *self_set |= flipped;
+            *other_set &= !flipped;
         }
         (count, res)
     }
@@ -114,11 +107,7 @@ impl Board {
             Color::Black => (self.black, self.white),
             Color::White => (self.white, self.black),
         };
-
-        pos.flip_lines().iter().any(|points| {
-            let (c, _m) = line_flipped(&self_set, &other_set, points);
-            c > 0
-        })
+        pos.flip_lines().can_flip(&self_set, &other_set)
     }
 
     pub fn flip_candidates(&self, color: Color) -> impl Iterator<Item = Pos> + '_ {
@@ -176,21 +165,6 @@ impl Board {
         }
         n
     }
-}
-
-fn line_flipped(self_set: &PosSet, other_set: &PosSet, points: &[Pos]) -> (usize, PosSet) {
-    let mut flipped = PosSet::new();
-    for (count, pos) in points.iter().copied().enumerate() {
-        if other_set.contains(&pos) {
-            flipped |= pos;
-            continue;
-        }
-        if self_set.contains(&pos) {
-            return (count, flipped);
-        }
-        break;
-    }
-    (0, PosSet::new())
 }
 
 #[cfg(test)]
