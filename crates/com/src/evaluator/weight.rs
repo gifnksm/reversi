@@ -24,8 +24,19 @@ trait Pattern<const N: usize, const M: usize> {
     const WEIGHT_COUNT: usize;
     const PATTERN_TO_WEIGHT_MAP: &'static [u16; M];
 
-    fn evaluate(board: &Board, weight: &[i16; pattern::WEIGHT_COUNT]) -> i32 {
-        let weight = &weight[Self::WEIGHT_INDEX_OFFSET..][..Self::WEIGHT_COUNT];
+    fn patterns() -> Vec<Vec<Pos>> {
+        Self::PATTERNS
+            .iter()
+            .map(|pattern| pattern.to_vec())
+            .collect()
+    }
+
+    fn weight(weight: &Weight) -> &[i16] {
+        &weight.pattern[Self::WEIGHT_INDEX_OFFSET..][..Self::WEIGHT_COUNT]
+    }
+
+    fn evaluate(board: &Board, weight: &Weight) -> i32 {
+        let weight = &weight.pattern[Self::WEIGHT_INDEX_OFFSET..][..Self::WEIGHT_COUNT];
 
         let mut value = 0;
         for pattern in Self::PATTERNS {
@@ -36,14 +47,9 @@ trait Pattern<const N: usize, const M: usize> {
         value
     }
 
-    fn update(
-        board: &Board,
-        count: &mut [u8; pattern::WEIGHT_COUNT],
-        sum: &mut [i32; pattern::WEIGHT_COUNT],
-        diff: i32,
-    ) {
-        let count = &mut count[Self::WEIGHT_INDEX_OFFSET..][..Self::WEIGHT_COUNT];
-        let sum = &mut sum[Self::WEIGHT_INDEX_OFFSET..][..Self::WEIGHT_COUNT];
+    fn update(board: &Board, updater: &mut WeightUpdater, diff: i32) {
+        let count = &mut updater.parity_count[Self::WEIGHT_INDEX_OFFSET..][..Self::WEIGHT_COUNT];
+        let sum = &mut updater.parity_sum[Self::WEIGHT_INDEX_OFFSET..][..Self::WEIGHT_COUNT];
 
         for pattern in Self::PATTERNS {
             let pattern_index = board.pattern_index(pattern);
@@ -57,7 +63,7 @@ trait Pattern<const N: usize, const M: usize> {
 include!(concat!(env!("OUT_DIR"), "/pattern.rs"));
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct Weight {
+pub struct Weight {
     #[serde(with = "BigArray")]
     pattern: [i16; pattern::WEIGHT_COUNT],
     parity: [i16; 2],
@@ -69,6 +75,23 @@ impl Default for Weight {
             pattern: [0; pattern::WEIGHT_COUNT],
             parity: [0; 2],
         }
+    }
+}
+
+impl Weight {
+    pub fn patterns<'a>(
+        &'a self,
+    ) -> impl Iterator<Item = (&'static str, Vec<Vec<Pos>>, &'a [i16])> + 'a {
+        pattern::NAMES
+            .iter()
+            .copied()
+            .zip(pattern::PATTERN_FNS)
+            .zip(pattern::WEIGHT_FNS)
+            .map(move |((name, pat), f)| (name, pat(), f(self)))
+    }
+
+    pub fn parity(&self) -> &[i16; 2] {
+        &self.parity
     }
 }
 
@@ -85,6 +108,10 @@ pub struct WeightEvaluator {
 impl WeightEvaluator {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn weight(&self) -> &Weight {
+        &self.weight
     }
 
     fn with_weight(weight: Box<Weight>) -> Self {
@@ -106,7 +133,7 @@ impl WeightEvaluator {
         let mut res = 0;
 
         for evaluate in pattern::EVALUATE_FNS {
-            res += evaluate(board, &self.weight.pattern);
+            res += evaluate(board, &self.weight);
         }
         res += i32::from(self.weight.parity[board_parity_index(board)]);
 
@@ -151,7 +178,7 @@ impl WeightUpdater {
     pub fn update(&mut self, board: &Board, value: i32) {
         let diff = value - self.evaluator.compute_value(board);
         for update in pattern::UPDATE_FNS {
-            update(board, &mut self.pattern_count, &mut self.pattern_sum, diff);
+            update(board, self, diff);
         }
 
         let parity_index = board_parity_index(board);

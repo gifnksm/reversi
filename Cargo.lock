@@ -162,6 +162,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "reversi-dump"
+version = "0.1.0"
+dependencies = [
+ "argh",
+ "reversi-com",
+ "reversi-core",
+]
+
+[[package]]
 name = "reversi-learn"
 version = "0.1.0"
 dependencies = [

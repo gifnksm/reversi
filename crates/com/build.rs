@@ -49,7 +49,10 @@ fn main() -> Result<(), Error> {
     let mut writer = BufWriter::new(file);
     writeln!(&mut writer, "mod pattern {{")?;
     writeln!(&mut writer, "    use reversi_core::{{Board, Pos}};")?;
-    writeln!(&mut writer, "    use super::Pattern;")?;
+    writeln!(
+        &mut writer,
+        "    use super::{{Pattern, Weight, WeightUpdater}};"
+    )?;
 
     let mut weight_index = 0;
     let mut pattern_to_weight_map_list = vec![];
@@ -63,9 +66,33 @@ fn main() -> Result<(), Error> {
         )?;
     }
 
+    writeln!(&mut writer, "pub(super) const NAMES: &[&'static str] = &[")?;
+    for (name, _) in PATTERNS {
+        writeln!(&mut writer, "{:?},", name)?;
+    }
+    writeln!(&mut writer, "];")?;
+
     writeln!(
         &mut writer,
-        "pub(super) const EVALUATE_FNS: &[fn (board: &Board, weight: &[i16; WEIGHT_COUNT]) -> i32] = &["
+        "pub(super) const PATTERN_FNS: &[fn() -> Vec<Vec<Pos>>] = &["
+    )?;
+    for (name, _) in PATTERNS {
+        writeln!(&mut writer, "{}::patterns,", name)?;
+    }
+    writeln!(&mut writer, "];")?;
+
+    writeln!(
+        &mut writer,
+        "pub(super) const WEIGHT_FNS: &[fn(weight: &Weight) -> &[i16]] = &["
+    )?;
+    for (name, _) in PATTERNS {
+        writeln!(&mut writer, "{}::weight,", name)?;
+    }
+    writeln!(&mut writer, "];")?;
+
+    writeln!(
+        &mut writer,
+        "pub(super) const EVALUATE_FNS: &[fn (board: &Board, weight: &Weight) -> i32] = &["
     )?;
     for (name, _) in PATTERNS {
         writeln!(&mut writer, "{}::evaluate,", name)?;
@@ -74,7 +101,7 @@ fn main() -> Result<(), Error> {
 
     writeln!(
         &mut writer,
-        "pub(super) const UPDATE_FNS: &[fn (board: &Board, count: &mut [u8; WEIGHT_COUNT], sum: &mut [i32; WEIGHT_COUNT], diff: i32)] = &["
+        "pub(super) const UPDATE_FNS: &[fn (board: &Board, updater: &mut WeightUpdater, diff: i32)] = &["
     )?;
     for (name, _) in PATTERNS {
         writeln!(&mut writer, "{}::update,", name)?;
