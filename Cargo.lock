@@ -140,6 +140,7 @@ dependencies = [
 name = "reversi-cli"
 version = "0.1.0"
 dependencies = [
+ "rand",
  "reversi-com",
  "reversi-core",
 ]

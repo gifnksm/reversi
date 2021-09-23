@@ -1,4 +1,5 @@
 use crate::{traits::ColorExt, Result};
+use rand::prelude::*;
 use reversi_com::{Com, NextMove, WeightEvaluator};
 use reversi_core::{Board, Color, Pos};
 use std::{
@@ -49,14 +50,14 @@ impl Player for Human {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum ComputerLevel {
+pub enum AiLevel {
     Level1,
     Level2,
     Level3,
     Level4,
 }
 
-impl fmt::Display for ComputerLevel {
+impl fmt::Display for AiLevel {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Level1 => write!(f, "1"),
@@ -77,12 +78,12 @@ pub struct Computer {
 }
 
 impl Computer {
-    pub fn new(color: Color, evaluator: WeightEvaluator, level: ComputerLevel) -> Self {
+    pub fn new(color: Color, evaluator: WeightEvaluator, level: AiLevel) -> Self {
         let com = match level {
-            ComputerLevel::Level1 => Com::new(2, 8, 10),
-            ComputerLevel::Level2 => Com::new(4, 10, 12),
-            ComputerLevel::Level3 => Com::new(6, 12, 14),
-            ComputerLevel::Level4 => Com::new(8, 14, 16),
+            AiLevel::Level1 => Com::new(2, 8, 10),
+            AiLevel::Level2 => Com::new(4, 10, 12),
+            AiLevel::Level3 => Com::new(6, 12, 14),
+            AiLevel::Level4 => Com::new(8, 14, 16),
         };
         Self {
             color,
@@ -142,4 +143,39 @@ impl Player for Computer {
         );
         eprintln!();
     }
+}
+
+#[derive(Debug)]
+pub struct Random {
+    color: Color,
+    rng: ThreadRng,
+}
+
+impl Random {
+    pub fn new(color: Color) -> Self {
+        Self {
+            color,
+            rng: rand::thread_rng(),
+        }
+    }
+}
+
+impl Player for Random {
+    fn name(&self) -> &str {
+        "Random"
+    }
+
+    fn color(&self) -> Color {
+        self.color
+    }
+
+    fn next_move(&mut self, board: &Board) -> Result<Pos> {
+        let pos = board
+            .flip_candidates(self.color)
+            .choose(&mut self.rng)
+            .ok_or("cannot find a pos to put")?;
+        Ok(pos)
+    }
+
+    fn print_summary(&self) {}
 }

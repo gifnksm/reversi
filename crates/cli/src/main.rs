@@ -1,6 +1,6 @@
 use crate::{
     cli::Cli,
-    player::{Computer, ComputerLevel, Human, Player},
+    player::{AiLevel, Computer, Human, Player, Random},
     traits::ColorExt,
 };
 use reversi_com::WeightEvaluator;
@@ -137,6 +137,20 @@ fn choose_player(color: Color) -> Result<Box<dyn Player>> {
     match kind {
         PlayerKind::Human => Ok(Box::new(Human::new(color))),
         PlayerKind::Computer => {
+            #[derive(Debug, Clone, Copy)]
+            enum ComputerKind {
+                Ai(AiLevel),
+                Random,
+            }
+            impl fmt::Display for ComputerKind {
+                fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                    match self {
+                        ComputerKind::Ai(level) => write!(f, "{}", level),
+                        ComputerKind::Random => write!(f, "R"),
+                    }
+                }
+            }
+
             let data_path = Path::new("dat").join("evaluator.dat");
             let evaluator = if data_path.exists() {
                 let file = File::open(data_path)?;
@@ -148,24 +162,32 @@ fn choose_player(color: Color) -> Result<Box<dyn Player>> {
             };
 
             let candidates = &[
-                (ComputerLevel::Level1, "Level 1"),
-                (ComputerLevel::Level2, "Level 2"),
-                (ComputerLevel::Level3, "Level 3"),
-                (ComputerLevel::Level4, "Level 4"),
+                (ComputerKind::Random, "Random"),
+                (ComputerKind::Ai(AiLevel::Level1), "Level 1"),
+                (ComputerKind::Ai(AiLevel::Level2), "Level 2"),
+                (ComputerKind::Ai(AiLevel::Level3), "Level 3"),
+                (ComputerKind::Ai(AiLevel::Level4), "Level 4"),
             ];
-            let level = read_input(
-                &format!("Choose {} player level", color.mark()),
-                Some(ComputerLevel::Level4),
+            let kind = read_input(
+                &format!("Choose {} player computer kind", color.mark()),
+                Some(ComputerKind::Ai(AiLevel::Level4)),
                 candidates,
-                |s| match s {
-                    "1" => Ok(ComputerLevel::Level1),
-                    "2" => Ok(ComputerLevel::Level2),
-                    "3" => Ok(ComputerLevel::Level3),
-                    "4" => Ok(ComputerLevel::Level4),
-                    _ => Err(format!("Invalid player level: {}", s).into()),
+                |s| {
+                    let s = s.to_ascii_uppercase();
+                    match s.as_str() {
+                        "1" => Ok(ComputerKind::Ai(AiLevel::Level1)),
+                        "2" => Ok(ComputerKind::Ai(AiLevel::Level2)),
+                        "3" => Ok(ComputerKind::Ai(AiLevel::Level3)),
+                        "4" => Ok(ComputerKind::Ai(AiLevel::Level4)),
+                        "R" => Ok(ComputerKind::Random),
+                        _ => Err(format!("Invalid player computer kind: {}", s).into()),
+                    }
                 },
             )?;
-            Ok(Box::new(Computer::new(color, evaluator, level)))
+            Ok(match kind {
+                ComputerKind::Ai(level) => Box::new(Computer::new(color, evaluator, level)),
+                ComputerKind::Random => Box::new(Random::new(color)),
+            })
         }
     }
 }
