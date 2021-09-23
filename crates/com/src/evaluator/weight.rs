@@ -175,7 +175,7 @@ impl WeightUpdater {
         &self.evaluator
     }
 
-    pub fn update(&mut self, board: &Board, value: i32) {
+    pub fn update(&mut self, board: &Board, value: i32) -> i32 {
         let diff = value - self.evaluator.compute_value(board);
         for update in pattern::UPDATE_FNS {
             update(board, self, diff);
@@ -184,6 +184,8 @@ impl WeightUpdater {
         let parity_index = board_parity_index(board);
         self.parity_count[parity_index] += 1;
         self.parity_sum[parity_index] += diff;
+
+        diff
     }
 
     pub fn flush(&mut self) {

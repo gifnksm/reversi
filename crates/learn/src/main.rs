@@ -25,6 +25,8 @@ struct Summary {
     start: Instant,
     interval_thinking_time: Duration,
     interval_visited_nodes: u64,
+    interval_dist_sum: i32,
+    interval_dist_count: i32,
     total_thinking_time: Duration,
     total_visited_nodes: u64,
 }
@@ -34,17 +36,24 @@ impl Summary {
         Self {
             interval_thinking_time: Duration::ZERO,
             interval_visited_nodes: 0,
+            interval_dist_sum: 0,
+            interval_dist_count: 0,
             start: Instant::now(),
             total_thinking_time: Duration::ZERO,
             total_visited_nodes: 0,
         }
     }
 
-    fn add(&mut self, elapsed: Duration, visited_nodes: u32) {
+    fn add_play_result(&mut self, elapsed: Duration, visited_nodes: u32) {
         self.total_thinking_time += elapsed;
         self.total_visited_nodes += u64::from(visited_nodes);
         self.interval_thinking_time += elapsed;
         self.interval_visited_nodes += u64::from(visited_nodes);
+    }
+
+    fn add_update_result(&mut self, dist: i32) {
+        self.interval_dist_sum += dist;
+        self.interval_dist_count += 1;
     }
 
     fn print_iteration(&mut self, current_iteration: u32, total_iteration: u32) {
@@ -52,7 +61,7 @@ impl Summary {
         let progress = f64::from(current_iteration) / f64::from(total_iteration);
 
         eprintln!(
-            "{:8} / {:8} ({:5.1}%) (Estimated: {} / {}) ({} nodes, {:.3} sec, {:.2} kNPs)",
+            "{:8} / {:8} ({:5.1}%) (Estimated: {} / {}) ({} nodes, {:.3} sec, {:.2} kNPs) (AVG dist {})",
             current_iteration,
             total_iteration,
             progress * 100.0,
@@ -60,11 +69,14 @@ impl Summary {
             DurationDisplay(elapsed.div_f64(progress)),
             self.interval_visited_nodes,
             self.interval_thinking_time.as_secs_f64(),
-            self.interval_visited_nodes as f64 / self.interval_thinking_time.as_secs_f64() / 1000.0
+            self.interval_visited_nodes as f64 / self.interval_thinking_time.as_secs_f64() / 1000.0,
+            (self.interval_dist_sum + self.interval_dist_count / 2) / self.interval_dist_count
         );
 
         self.interval_thinking_time = Duration::ZERO;
         self.interval_visited_nodes = 0;
+        self.interval_dist_sum = 0;
+        self.interval_dist_count = 0;
     }
 
     fn print_total(self) {
@@ -115,7 +127,8 @@ fn main() -> Result<(), Error> {
             &mut history,
             &mut summary,
         );
-        update(&mut updater, &board, &mut history);
+        let avg_dist = update(&mut updater, &board, &mut history);
+        summary.add_update_result(avg_dist);
 
         if (i + 1) % 10 == 0 {
             updater.flush();
@@ -194,7 +207,7 @@ fn play_game(
             let start = Instant::now();
             let next_move = com.next_move(evaluator, &board, color);
             let elapsed = start.elapsed();
-            summary.add(elapsed, next_move.visited_nodes);
+            summary.add_play_result(elapsed, next_move.visited_nodes);
             next_move.best_pos
         };
         match pos {
@@ -214,7 +227,7 @@ fn play_game(
     board
 }
 
-fn update(updater: &mut WeightUpdater, board: &Board, history: &mut Vec<(Board, Color)>) {
+fn update(updater: &mut WeightUpdater, board: &Board, history: &mut Vec<(Board, Color)>) -> i32 {
     let result = updater.evaluator().evaluate(board, Color::Black, true);
 
     let mut board = *board;
@@ -222,12 +235,17 @@ fn update(updater: &mut WeightUpdater, board: &Board, history: &mut Vec<(Board, 
         board = history.pop().unwrap().0;
     }
 
+    let mut total_dist = 0;
+    let mut count = 0;
     for _ in (board.count(None) as i8)..(Board::SIZE * Board::SIZE - 12) {
         let (board, color) = history.pop().unwrap();
-        if color == Color::Black {
-            updater.update(&board, result);
+        let diff = if color == Color::Black {
+            updater.update(&board, result)
         } else {
-            updater.update(&board.reverse(), -result);
-        }
+            updater.update(&board.reverse(), -result)
+        };
+        total_dist += diff.abs();
+        count += 1;
     }
+    (total_dist + count / 2) / count
 }
