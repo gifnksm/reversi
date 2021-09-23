@@ -4,6 +4,7 @@ use reversi_core::{Board, Color, Pos};
 use std::{
     fs::File,
     io::BufReader,
+    ops::RangeInclusive,
     path::{Path, PathBuf},
 };
 
@@ -22,7 +23,7 @@ fn main() -> Result<(), Error> {
     let evaluator = WeightEvaluator::read(BufReader::new(File::open(&args.file)?))?;
 
     for (name, patterns, weight) in evaluator.weight().patterns() {
-        let pattern = &patterns[0];
+        let pattern = choose_pattern(&patterns);
         let mut sorted = (0..).zip(weight.iter().copied()).collect::<Vec<_>>();
         sorted.sort_by(|(_, a), (_, b)| a.cmp(b).reverse());
 
@@ -44,7 +45,7 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
-fn print_boards(pattern: &[Pos], scores: &[(u16, i16)]) {
+fn pattern_range(pattern: &[Pos]) -> (RangeInclusive<i8>, RangeInclusive<i8>) {
     let (x_min, x_max) = pattern
         .iter()
         .map(|p| p.x())
@@ -57,6 +58,25 @@ fn print_boards(pattern: &[Pos], scores: &[(u16, i16)]) {
         .fold((i8::MAX, i8::MIN), |(min, max), v| {
             (i8::min(min, v), i8::max(max, v))
         });
+    (x_min..=x_max, y_min..=y_max)
+}
+
+fn choose_pattern(patterns: &[Vec<Pos>]) -> &[Pos] {
+    patterns
+        .iter()
+        .min_by_key(|pattern| {
+            let (x_range, y_range) = pattern_range(pattern);
+            (
+                y_range.end() - y_range.start(),
+                *x_range.start(),
+                *y_range.start(),
+            )
+        })
+        .unwrap()
+}
+
+fn print_boards(pattern: &[Pos], scores: &[(u16, i16)]) {
+    let (x_range, y_range) = pattern_range(pattern);
 
     print!(" ");
     for (_index, value) in scores {
@@ -66,18 +86,18 @@ fn print_boards(pattern: &[Pos], scores: &[(u16, i16)]) {
     print!(" ");
     for _ in 0..10 {
         let mut chunk = String::new();
-        for x in x_min..=x_max {
+        for x in x_range.clone() {
             chunk.push(' ');
             chunk.push((b'A' + x as u8) as char);
         }
         print!(" | {:^16}", chunk);
     }
     println!(" |");
-    for y in y_min..=y_max {
+    for y in y_range {
         print!("{}", y);
         for (index, _value) in scores {
             let mut chunk = String::new();
-            for x in x_min..=x_max {
+            for x in x_range.clone() {
                 let p = Pos::from_xy(x, y).unwrap();
                 let board = Board::from_pattern_index(pattern, *index);
                 let mark = match board.get(p) {
