@@ -1,5 +1,6 @@
 use argh::FromArgs;
 use rand::{seq::IteratorRandom, Rng};
+use rayon::prelude::*;
 use reversi_com::{Com, Evaluate as _, WeightEvaluator, WeightUpdater};
 use reversi_core::{Board, Color};
 use std::{
@@ -131,7 +132,10 @@ fn main() -> Result<(), Error> {
         for _ in 0..ITERATION_INTERVAL / FLUSH_INTERVAL {
             let evaluator = updater.evaluator().clone();
             (0..FLUSH_INTERVAL)
+                .into_par_iter()
                 .map(|_| play_game(&evaluator, &com))
+                .collect::<Vec<_>>()
+                .into_iter()
                 .for_each(|(board, history, elapsed, visited_nodes)| {
                     let avg_dist = update(&mut updater, &board, &history);
                     summary.add_result(elapsed, visited_nodes, avg_dist);

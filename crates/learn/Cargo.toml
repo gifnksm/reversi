@@ -13,3 +13,4 @@ argh = "0.1.6"
 rand = "0.8.4"
 reversi-core = { path = "../core" }
 reversi-com = { path = "../com" }
+rayon = "1.5.1"
