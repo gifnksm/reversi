@@ -48,8 +48,8 @@ trait Pattern<const N: usize, const M: usize> {
     }
 
     fn update(board: &Board, updater: &mut WeightUpdater, diff: i32) {
-        let count = &mut updater.parity_count[Self::WEIGHT_INDEX_OFFSET..][..Self::WEIGHT_COUNT];
-        let sum = &mut updater.parity_sum[Self::WEIGHT_INDEX_OFFSET..][..Self::WEIGHT_COUNT];
+        let count = &mut updater.pattern_count[Self::WEIGHT_INDEX_OFFSET..][..Self::WEIGHT_COUNT];
+        let sum = &mut updater.pattern_sum[Self::WEIGHT_INDEX_OFFSET..][..Self::WEIGHT_COUNT];
 
         for pattern in Self::PATTERNS {
             let pattern_index = board.pattern_index(pattern);
