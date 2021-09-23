@@ -32,11 +32,47 @@ const PATTERNS: &[(&str, &[Pos])] = &[
     ),
     (
         "Edge",
-        &[P::A1, P::B1, P::C1, P::D1, P::E1, P::F1, P::G1, P::B2],
+        &[
+            P::A1,
+            P::B1,
+            P::C1,
+            P::D1,
+            P::E1,
+            P::F1,
+            P::G1,
+            P::H1,
+            P::B2,
+            P::G2,
+        ],
     ),
     (
-        "Corner",
-        &[P::A1, P::B1, P::C1, P::A2, P::B2, P::C2, P::A3, P::B3],
+        "Corner3x3",
+        &[
+            P::A1,
+            P::B1,
+            P::C1,
+            P::A2,
+            P::B2,
+            P::C2,
+            P::A3,
+            P::B3,
+            P::C3,
+        ],
+    ),
+    (
+        "Corner5x2",
+        &[
+            P::A1,
+            P::B1,
+            P::C1,
+            P::D1,
+            P::E1,
+            P::A2,
+            P::B2,
+            P::C2,
+            P::D2,
+            P::E2,
+        ],
     ),
 ];
 
@@ -129,7 +165,7 @@ fn main() -> Result<(), Error> {
 
 fn emit_pattern(
     mut writer: impl Write,
-    weight_index: &mut u16,
+    weight_index: &mut u32,
     pattern_to_weight_map_list: &mut Vec<Vec<u16>>,
     name: &str,
     pattern: &[Pos],
@@ -144,7 +180,7 @@ fn emit_pattern(
         &pattern_map,
         pattern_to_weight_map_list,
     );
-    *weight_index += weight_count;
+    *weight_index += u32::from(weight_count);
 
     writeln!(&mut writer, "    pub(super) struct {};", name)?;
     writeln!(
