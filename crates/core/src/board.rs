@@ -53,6 +53,12 @@ impl Board {
         *remove_mask &= !mask;
     }
 
+    pub fn unset(&mut self, pos: Pos) {
+        let mask = PosSet::new() | pos;
+        self.black &= !mask;
+        self.white &= !mask;
+    }
+
     pub fn count(&self, color: Option<Color>) -> u32 {
         match color {
             Some(Color::Black) => self.black.count(),
