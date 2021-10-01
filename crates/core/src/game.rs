@@ -51,6 +51,13 @@ impl Game {
         &self.board
     }
 
+    pub fn color(&self) -> Option<Color> {
+        match self.state {
+            GameState::Turn(_, color) => Some(color),
+            GameState::GameOver(_) => None,
+        }
+    }
+
     pub fn put(&mut self, pos: Pos) -> Result<(), PutError> {
         let (turn, color) = match self.state {
             GameState::Turn(turn, color) => (turn, color),
