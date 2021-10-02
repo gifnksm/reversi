@@ -1,6 +1,7 @@
 use super::config::ConfigState;
 use crate::player::{AiLevel, ComputerKind, PlayerConf, PlayerKind};
 use eframe::egui::{self, Align2, Color32, Stroke, TextStyle, Vec2};
+use rand::prelude::*;
 use reversi_com::{Com, NextMove, WeightEvaluator};
 use reversi_core::{Board, Color, Game, Pos};
 use std::{
@@ -53,6 +54,7 @@ impl Computer {
             AiLevel::Level4 => Com::new(8, 14, 16),
         };
 
+        // TODO: error handling
         let evaluator = || -> Result<WeightEvaluator, Box<dyn std::error::Error>> {
             let data_path = Path::new("dat").join("evaluator.dat");
             if data_path.exists() {
@@ -143,7 +145,16 @@ impl PlayState {
                 });
                 self.state = GameState::WaitComputer(rx);
             }
-            Some(Computer::Random) => todo!(),
+            Some(Computer::Random) => {
+                let mut rng = rand::thread_rng();
+                let pos = self
+                    .game
+                    .board()
+                    .flip_candidates(color)
+                    .choose(&mut rng)
+                    .unwrap();
+                self.put(ui, pos);
+            }
             None => self.state = GameState::WaitHuman,
         };
     }

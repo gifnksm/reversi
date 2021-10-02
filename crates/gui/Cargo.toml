@@ -9,3 +9,4 @@ edition = "2018"
 eframe = "0.14.0"
 reversi-core = { path = "../core" }
 reversi-com = { path = "../com" }
+rand = "0.8.4"

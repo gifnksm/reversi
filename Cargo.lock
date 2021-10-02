@@ -1482,6 +1482,7 @@ name = "reversi-gui"
 version = "0.1.0"
 dependencies = [
  "eframe",
+ "rand",
  "reversi-com",
  "reversi-core",
 ]
