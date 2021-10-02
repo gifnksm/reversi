@@ -6,6 +6,8 @@
         "bitor",
         "bitxor",
         "coeff",
+        "eframe",
+        "egui",
         "nega",
         "reversi",
         "thiserror"
