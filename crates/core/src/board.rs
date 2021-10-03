@@ -102,10 +102,9 @@ impl Board {
     }
 
     pub fn all_flipped(&self) -> impl Iterator<Item = (Pos, Board)> + '_ {
-        let candidates = !(self.mine_disks | self.others_disks) & self.others_disks.neighbors();
-        candidates
+        self.flip_candidates()
             .into_iter()
-            .filter_map(move |pos| self.flipped(pos).map(|board| (pos, board)))
+            .map(move |pos| (pos, self.flipped(pos).unwrap()))
     }
 
     pub fn can_flip(&self, pos: Pos) -> bool {
@@ -116,15 +115,48 @@ impl Board {
             .can_flip(&self.mine_disks, &self.others_disks)
     }
 
-    pub fn flip_candidates(&self) -> impl Iterator<Item = Pos> + '_ {
-        let candidates = !(self.mine_disks | self.others_disks) & self.others_disks.neighbors();
-        candidates
-            .into_iter()
-            .filter(move |pos| self.can_flip(*pos))
+    pub fn flip_candidates(&self) -> PosSet {
+        let top_bottom_mask = PosSet::ALL;
+        let left_right_mask = !(PosSet::new()
+            | (Pos::A1 | Pos::A2 | Pos::A3 | Pos::A4 | Pos::A5 | Pos::A6 | Pos::A7 | Pos::A8)
+            | (Pos::H1 | Pos::H2 | Pos::H3 | Pos::H4 | Pos::H5 | Pos::H6 | Pos::H7 | Pos::H8));
+        let empty_cells = !self.mine_disks & !self.others_disks;
+
+        let right_moves = |mask, offset| {
+            let e = self.others_disks & mask;
+            let mut m = (self.mine_disks << offset) & e;
+            m |= (m << offset) & e;
+            m |= (m << offset) & e;
+            m |= (m << offset) & e;
+            m |= (m << offset) & e;
+            m |= (m << offset) & e;
+            m << offset
+        };
+
+        let left_moves = |mask, offset| {
+            let e = self.others_disks & mask;
+            let mut m = (self.mine_disks >> offset) & e;
+            m |= (m >> offset) & e;
+            m |= (m >> offset) & e;
+            m |= (m >> offset) & e;
+            m |= (m >> offset) & e;
+            m |= (m >> offset) & e;
+            m >> offset
+        };
+
+        empty_cells
+            & (left_moves(left_right_mask, 1)
+                | left_moves(left_right_mask, 9)
+                | left_moves(top_bottom_mask, 8)
+                | left_moves(left_right_mask, 7)
+                | right_moves(left_right_mask, 1)
+                | right_moves(left_right_mask, 9)
+                | right_moves(top_bottom_mask, 8)
+                | right_moves(left_right_mask, 7))
     }
 
     pub fn can_play(&self) -> bool {
-        self.flip_candidates().next().is_some()
+        !self.flip_candidates().is_empty()
     }
 
     pub fn from_pattern_index(pattern: &[Pos], index: u16) -> Self {
@@ -165,30 +197,38 @@ impl Board {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::iter::FromIterator;
 
     #[test]
     fn flip_candidates() {
         use Pos as P;
 
         let board = Board::new();
-        assert!(board.flip_candidates().eq([P::D3, P::C4, P::F5, P::E6]));
+        assert_eq!(
+            board.flip_candidates(),
+            PosSet::from_iter([P::D3, P::C4, P::F5, P::E6])
+        );
 
         assert_eq!(board.flipped(P::A1), None);
         let board = board.flipped(P::D3).unwrap();
-        assert!(board.mine_disks.into_iter().eq([P::E5]));
-        assert!(board
-            .others_disks
-            .into_iter()
-            .eq([P::D3, P::D4, P::E4, P::D5]));
+        assert_eq!(board.mine_disks, PosSet::from_iter([P::E5]));
+        assert_eq!(
+            board.others_disks,
+            PosSet::from_iter([P::D3, P::D4, P::E4, P::D5])
+        );
 
-        assert!(board.flip_candidates().eq([P::C3, P::E3, P::C5]));
+        assert_eq!(
+            board.flip_candidates(),
+            PosSet::from_iter([P::C3, P::E3, P::C5])
+        );
         let board = board.flipped(P::C5).unwrap();
-        assert!(board.mine_disks.into_iter().eq([P::D3, P::D4, P::E4]));
-        assert!(board.others_disks.into_iter().eq([P::C5, P::D5, P::E5]));
+        assert_eq!(board.mine_disks, PosSet::from_iter([P::D3, P::D4, P::E4]));
+        assert_eq!(board.others_disks, PosSet::from_iter([P::C5, P::D5, P::E5]));
 
-        assert!(board
-            .flip_candidates()
-            .eq([P::B6, P::C6, P::D6, P::E6, P::F6]));
+        assert_eq!(
+            board.flip_candidates(),
+            PosSet::from_iter([P::B6, P::C6, P::D6, P::E6, P::F6])
+        );
     }
 
     #[test]

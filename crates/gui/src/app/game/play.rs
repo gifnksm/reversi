@@ -151,6 +151,7 @@ impl PlayState {
                     .game
                     .board()
                     .flip_candidates()
+                    .into_iter()
                     .choose(&mut rng)
                     .unwrap();
                 self.put(ui, pos);

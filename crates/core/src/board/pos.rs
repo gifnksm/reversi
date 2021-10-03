@@ -1,6 +1,12 @@
 use super::Board;
 use crate::traits::{IterOneBits, OneBits};
-use std::{fmt, iter::FromIterator, num::ParseIntError, str::FromStr};
+use std::{
+    fmt,
+    iter::FromIterator,
+    num::ParseIntError,
+    ops::{Shl, Shr},
+    str::FromStr,
+};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Pos(u64);
@@ -197,6 +203,9 @@ impl fmt::Debug for PosSet {
 }
 
 impl PosSet {
+    pub const EMPTY: Self = PosSet(0);
+    pub const ALL: Self = PosSet(!0);
+
     pub const fn new() -> Self {
         Self(0)
     }
@@ -218,34 +227,6 @@ impl PosSet {
 
     pub fn contains(&self, pos: &Pos) -> bool {
         self.0 & pos.bit().0 != 0
-    }
-
-    pub(crate) fn neighbors(&self) -> PosSet {
-        let mut neighbor_bits = 0;
-        let up = -1;
-        let down = 1;
-        let left = -Board::SIZE;
-        let right = Board::SIZE;
-
-        let amts = [
-            up + left,
-            up,
-            up + right,
-            left,
-            right,
-            down + left,
-            down,
-            down + right,
-        ];
-
-        for amt in amts {
-            if amt < 0 {
-                neighbor_bits |= self.0 >> (-amt);
-            } else {
-                neighbor_bits |= self.0 << amt;
-            }
-        }
-        Self(neighbor_bits)
     }
 }
 
@@ -306,6 +287,28 @@ macro_rules! impl_bit_assign_ops {
 impl_bit_assign_ops!(BitOrAssign, bitor_assign, |=);
 impl_bit_assign_ops!(BitAndAssign, bitand_assign, &=);
 impl_bit_assign_ops!(BitXorAssign, bitxor_assign, ^=);
+
+impl<T> Shl<T> for PosSet
+where
+    u64: Shl<T, Output = u64>,
+{
+    type Output = Self;
+
+    fn shl(self, rhs: T) -> Self::Output {
+        Self(self.0 << rhs)
+    }
+}
+
+impl<T> Shr<T> for PosSet
+where
+    u64: Shr<T, Output = u64>,
+{
+    type Output = Self;
+
+    fn shr(self, rhs: T) -> Self::Output {
+        Self(self.0 >> rhs)
+    }
+}
 
 impl IntoIterator for PosSet {
     type Item = Pos;

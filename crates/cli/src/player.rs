@@ -35,7 +35,7 @@ impl Player for Human {
     }
 
     fn next_move(&mut self, board: &Board) -> Result<Pos> {
-        let candidate = board.flip_candidates().next().unwrap();
+        let candidate = board.flip_candidates().into_iter().next().unwrap();
 
         crate::read_input("Input position to put a disk", Some(candidate), &[], |s| {
             let pos = s.parse()?;
@@ -172,6 +172,7 @@ impl Player for Random {
     fn next_move(&mut self, board: &Board) -> Result<Pos> {
         let pos = board
             .flip_candidates()
+            .into_iter()
             .choose(&mut self.rng)
             .ok_or("cannot find a pos to put")?;
         Ok(pos)
