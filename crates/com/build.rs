@@ -108,41 +108,37 @@ fn main() -> Result<(), Error> {
     }
     writeln!(&mut writer, "];")?;
 
-    writeln!(
-        &mut writer,
-        "pub(super) const PATTERN_FNS: &[fn() -> Vec<Vec<Pos>>] = &["
-    )?;
-    for (name, _) in PATTERNS {
-        writeln!(&mut writer, "{}::patterns,", name)?;
-    }
-    writeln!(&mut writer, "];")?;
+    let tables = [
+        ("PATTERNS_FNS", "fn() -> Vec<Vec<Pos>>", "patterns"),
+        ("WEIGHT_FNS", "fn(weight: &Weight) -> &[i16]", "weight"),
+        (
+            "PATTERN_TO_WEIGHT_MAP_FNS",
+            "fn() -> &'static [u16]",
+            "pattern_to_weight_map",
+        ),
+        (
+            "EVALUATE_FNS",
+            "fn(board: &Board, weight: &Weight) -> i32",
+            "evaluate",
+        ),
+        (
+            "UPDATE_FNS",
+            "fn(board: &Board, updater: &mut WeightUpdater, diff: i32)",
+            "update",
+        ),
+    ];
 
-    writeln!(
-        &mut writer,
-        "pub(super) const WEIGHT_FNS: &[fn(weight: &Weight) -> &[i16]] = &["
-    )?;
-    for (name, _) in PATTERNS {
-        writeln!(&mut writer, "{}::weight,", name)?;
+    for (name, item_type, item_name) in tables {
+        writeln!(
+            &mut writer,
+            "pub(super) const {}: &[{}] = &[",
+            name, item_type
+        )?;
+        for (name, _) in PATTERNS {
+            writeln!(&mut writer, "    {}::{},", name, item_name)?;
+        }
+        writeln!(&mut writer, "];")?;
     }
-    writeln!(&mut writer, "];")?;
-
-    writeln!(
-        &mut writer,
-        "pub(super) const EVALUATE_FNS: &[fn (board: &Board, weight: &Weight) -> i32] = &["
-    )?;
-    for (name, _) in PATTERNS {
-        writeln!(&mut writer, "{}::evaluate,", name)?;
-    }
-    writeln!(&mut writer, "];")?;
-
-    writeln!(
-        &mut writer,
-        "pub(super) const UPDATE_FNS: &[fn (board: &Board, updater: &mut WeightUpdater, diff: i32)] = &["
-    )?;
-    for (name, _) in PATTERNS {
-        writeln!(&mut writer, "{}::update,", name)?;
-    }
-    writeln!(&mut writer, "];")?;
 
     writeln!(
         &mut writer,

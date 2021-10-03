@@ -35,6 +35,10 @@ trait Pattern<const N: usize, const M: usize> {
         &weight.pattern[Self::WEIGHT_INDEX_OFFSET..][..Self::WEIGHT_COUNT]
     }
 
+    fn pattern_to_weight_map() -> &'static [u16] {
+        Self::PATTERN_TO_WEIGHT_MAP
+    }
+
     fn evaluate(board: &Board, weight: &Weight) -> i32 {
         let weight = &weight.pattern[Self::WEIGHT_INDEX_OFFSET..][..Self::WEIGHT_COUNT];
 
@@ -81,13 +85,16 @@ impl Default for Weight {
 impl Weight {
     pub fn patterns<'a>(
         &'a self,
-    ) -> impl Iterator<Item = (&'static str, Vec<Vec<Pos>>, &'a [i16])> + 'a {
+    ) -> impl Iterator<Item = (&'static str, Vec<Vec<Pos>>, &'a [i16], &'static [u16])> + 'a {
         pattern::NAMES
             .iter()
             .copied()
-            .zip(pattern::PATTERN_FNS)
+            .zip(pattern::PATTERNS_FNS)
             .zip(pattern::WEIGHT_FNS)
-            .map(move |((name, pat), f)| (name, pat(), f(self)))
+            .zip(pattern::PATTERN_TO_WEIGHT_MAP_FNS)
+            .map(move |(((name, pattern), weight), pattern_to_weight)| {
+                (name, pattern(), weight(self), pattern_to_weight())
+            })
     }
 
     pub fn parity(&self) -> &[i16; 2] {

@@ -2,6 +2,7 @@ use argh::FromArgs;
 use reversi_com::WeightEvaluator;
 use reversi_core::{Board, Disk, Pos};
 use std::{
+    collections::HashMap,
     fs::File,
     io::BufReader,
     ops::RangeInclusive,
@@ -22,17 +23,19 @@ fn main() -> Result<(), Error> {
     let args: Args = argh::from_env();
     let evaluator = WeightEvaluator::read(BufReader::new(File::open(&args.file)?))?;
 
-    for (name, patterns, weight) in evaluator.weight().patterns() {
+    for (name, patterns, weight, pattern_to_weight_map) in evaluator.weight().patterns() {
         let pattern = choose_pattern(&patterns);
+        let map = weight_to_pattern_map(pattern_to_weight_map);
         let mut sorted = (0..).zip(weight.iter().copied()).collect::<Vec<_>>();
         sorted.sort_by(|(_, a), (_, b)| a.cmp(b).reverse());
 
         println!("===== {} =====", name);
         println!("TOP 10 BOARDS");
-        print_boards(pattern, &sorted[..10]);
+        print_boards(&map, pattern, &sorted[..10]);
         println!();
         println!("WORST 10 BOARDS");
         print_boards(
+            &map,
             pattern,
             &sorted.iter().copied().rev().take(10).collect::<Vec<_>>(),
         );
@@ -75,7 +78,11 @@ fn choose_pattern(patterns: &[Vec<Pos>]) -> &[Pos] {
         .unwrap()
 }
 
-fn print_boards(pattern: &[Pos], scores: &[(u16, i16)]) {
+fn weight_to_pattern_map(pattern_to_weight_map: &[u16]) -> HashMap<u16, u16> {
+    pattern_to_weight_map.iter().copied().zip(0..).collect()
+}
+
+fn print_boards(weight_to_pattern_map: &HashMap<u16, u16>, pattern: &[Pos], scores: &[(u16, i16)]) {
     let (x_range, y_range) = pattern_range(pattern);
 
     print!(" ");
@@ -95,11 +102,12 @@ fn print_boards(pattern: &[Pos], scores: &[(u16, i16)]) {
     println!(" |");
     for y in y_range {
         print!("{}", y);
-        for (index, _value) in scores {
+        for (weight_index, _value) in scores {
             let mut chunk = String::new();
             for x in x_range.clone() {
                 let p = Pos::from_xy(x, y).unwrap();
-                let board = Board::from_pattern_index(pattern, *index);
+                let pattern_index = weight_to_pattern_map[weight_index];
+                let board = Board::from_pattern_index(pattern, pattern_index);
                 let mark = match board.get_disk(p) {
                     Some(Disk::Mine) => 'O',
                     Some(Disk::Others) => 'X',
