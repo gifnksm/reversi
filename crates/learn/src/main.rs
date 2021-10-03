@@ -203,7 +203,7 @@ fn play_game(evaluator: &WeightEvaluator, com: &Com) -> (Vec<(Board, Color)>, Du
                 color = color.reverse();
             }
             None => {
-                board = board.passed();
+                board = board.reverse();
                 color = color.reverse();
             }
         }
@@ -227,10 +227,10 @@ fn play_game(evaluator: &WeightEvaluator, com: &Com) -> (Vec<(Board, Color)>, Du
                 color = color.reverse();
             }
             None => {
-                board = board.passed();
+                board = board.reverse();
                 color = color.reverse();
                 if !board.can_play() {
-                    board = board.passed();
+                    board = board.reverse();
                     color = color.reverse();
                     break;
                 }
@@ -238,7 +238,7 @@ fn play_game(evaluator: &WeightEvaluator, com: &Com) -> (Vec<(Board, Color)>, Du
         }
     }
     history.push((board, color));
-    assert!(!board.can_play() && (!board.passed().can_play()));
+    assert!(!board.can_play() && (!board.reverse().can_play()));
     (history, total_duration, total_visited_nodes)
 }
 

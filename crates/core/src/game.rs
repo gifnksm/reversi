@@ -107,7 +107,7 @@ impl Game {
             if self.board.can_play() {
                 return Ok(());
             }
-            self.board = self.board.passed();
+            self.board = self.board.reverse();
             self.turn_color = self.turn_color.reverse();
         }
 

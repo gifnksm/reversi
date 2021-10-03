@@ -94,7 +94,7 @@ impl Board {
         })
     }
 
-    pub fn passed(&self) -> Self {
+    pub fn reverse(&self) -> Self {
         Board {
             mine_disks: self.others_disks,
             others_disks: self.mine_disks,
@@ -201,7 +201,7 @@ mod tests {
             board = board.flipped(hand).unwrap();
         }
         assert!(!board.can_play());
-        board = board.passed();
+        board = board.reverse();
         assert!(board.can_play());
     }
 }

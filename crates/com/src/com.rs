@@ -135,7 +135,7 @@ where
     (
         -alpha_beta(
             evaluator,
-            &board.passed(),
+            &board.reverse(),
             depth,
             (-beta, -alpha),
             true,
@@ -190,7 +190,7 @@ where
     }
 
     (
-        -nega_max(evaluator, &board.passed(), depth, true, visited_nodes).0,
+        -nega_max(evaluator, &board.reverse(), depth, true, visited_nodes).0,
         None,
     )
 }
@@ -263,7 +263,7 @@ mod tests {
                 None if in_pass => break,
                 None => {
                     in_pass = true;
-                    board = board.passed();
+                    board = board.reverse();
                 }
             }
         }
