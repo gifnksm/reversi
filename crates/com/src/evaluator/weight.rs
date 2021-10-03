@@ -60,6 +60,14 @@ trait Pattern<const N: usize, const M: usize> {
             let weight_index = usize::from(Self::PATTERN_TO_WEIGHT_MAP[usize::from(pattern_index)]);
             count[weight_index] += 1;
             sum[weight_index] += diff;
+
+            let rev_pattern_index = board.reverse().pattern_index(pattern);
+            if rev_pattern_index != pattern_index {
+                let rev_weight_index =
+                    usize::from(Self::PATTERN_TO_WEIGHT_MAP[usize::from(rev_pattern_index)]);
+                count[rev_weight_index] += 1;
+                sum[rev_weight_index] -= diff;
+            }
         }
     }
 }
