@@ -37,9 +37,8 @@ fn board_flipped(c: &mut Criterion) {
         assert_eq!(board.count_disk(None), 1);
 
         let flipped = board.flipped(Pos::D4).unwrap();
-        assert_eq!(flipped.0.get(), 20);
-        assert_eq!(flipped.1.count_disk(Some(Disk::Mine)), 16);
-        assert_eq!(flipped.1.count_disk(Some(Disk::Others)), 48);
+        assert_eq!(flipped.count_disk(Some(Disk::Mine)), 16);
+        assert_eq!(flipped.count_disk(Some(Disk::Others)), 48);
 
         b.iter(|| {
             let board = black_box(board);

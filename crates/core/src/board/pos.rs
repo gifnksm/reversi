@@ -139,47 +139,43 @@ pub(crate) struct FlipLines {
 }
 
 impl FlipLines {
-    pub(crate) fn flipped(&self, self_set: &PosSet, other_set: &PosSet) -> (usize, PosSet) {
+    pub(crate) fn flipped(&self, self_set: &PosSet, other_set: &PosSet) -> PosSet {
         if (*self_set & self.self_mask).is_empty() || (*other_set & self.other_mask).is_empty() {
-            return (0, PosSet::new());
+            return PosSet::new();
         }
-
-        let mut count = 0;
         let mut flipped = PosSet::new();
         for &line in self.lines {
-            let (c, s) = Self::line_flipped(self_set, other_set, line);
-            count += c;
+            let s = Self::line_flipped(self_set, other_set, line);
             flipped |= s;
         }
-        if count > 0 {
+        if !flipped.is_empty() {
             flipped |= self.pos;
-            count += 1;
         }
-        (count, flipped)
+        flipped
     }
 
     pub(crate) fn can_flip(&self, self_set: &PosSet, other_set: &PosSet) -> bool {
         !(*self_set & self.self_mask).is_empty()
             && !(*other_set & self.other_mask).is_empty()
             && self.lines.iter().any(|line| {
-                let (c, _f) = Self::line_flipped(self_set, other_set, line);
-                c > 0
+                let f = Self::line_flipped(self_set, other_set, line);
+                !f.is_empty()
             })
     }
 
-    fn line_flipped(self_set: &PosSet, other_set: &PosSet, line: &[Pos]) -> (usize, PosSet) {
+    fn line_flipped(self_set: &PosSet, other_set: &PosSet, line: &[Pos]) -> PosSet {
         let mut flipped = PosSet::new();
-        for (count, pos) in line.iter().copied().enumerate() {
+        for pos in line.iter().copied() {
             if other_set.contains(&pos) {
                 flipped |= pos;
                 continue;
             }
             if self_set.contains(&pos) {
-                return (count, flipped);
+                return flipped;
             }
             break;
         }
-        (0, PosSet::new())
+        PosSet::new()
     }
 }
 

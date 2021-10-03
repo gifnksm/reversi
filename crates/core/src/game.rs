@@ -96,7 +96,7 @@ impl Game {
             return Err(PutError::GameOver);
         }
 
-        let (_count, flipped) = self.board.flipped(pos).ok_or(PutError::CannotPut(pos))?;
+        let flipped = self.board.flipped(pos).ok_or(PutError::CannotPut(pos))?;
 
         self.history.push(self.board);
 

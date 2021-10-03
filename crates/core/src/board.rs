@@ -1,5 +1,3 @@
-use std::num::NonZeroUsize;
-
 pub use self::{color::*, pos::*};
 
 mod color;
@@ -83,20 +81,17 @@ impl Board {
         self.mine_disks.count() + self.others_disks.count()
     }
 
-    pub fn flipped(&self, pos: Pos) -> Option<(NonZeroUsize, Self)> {
+    pub fn flipped(&self, pos: Pos) -> Option<Self> {
         if (self.mine_disks | self.others_disks).contains(&pos) {
             return None;
         }
-
-        let (count, flipped) = pos
+        let flipped = pos
             .flip_lines()
             .flipped(&self.mine_disks, &self.others_disks);
-        let count = NonZeroUsize::new(count)?;
-        let board = Board {
+        (!flipped.is_empty()).then(|| Board {
             mine_disks: self.others_disks & !flipped,
             others_disks: self.mine_disks | flipped,
-        };
-        Some((count, board))
+        })
     }
 
     pub fn passed(&self) -> Self {
@@ -110,7 +105,7 @@ impl Board {
         let candidates = !(self.mine_disks | self.others_disks) & self.others_disks.neighbors();
         candidates
             .into_iter()
-            .filter_map(move |pos| self.flipped(pos).map(|(_count, board)| (pos, board)))
+            .filter_map(move |pos| self.flipped(pos).map(|board| (pos, board)))
     }
 
     pub fn can_flip(&self, pos: Pos) -> bool {
@@ -179,8 +174,7 @@ mod tests {
         assert!(board.flip_candidates().eq([P::C4, P::D3, P::E6, P::F5]));
 
         assert_eq!(board.flipped(P::A1), None);
-        let (count, board) = board.flipped(P::D3).unwrap();
-        assert_eq!(count.get(), 2);
+        let board = board.flipped(P::D3).unwrap();
         assert!(board.mine_disks.into_iter().eq([P::E5]));
         assert!(board
             .others_disks
@@ -188,8 +182,7 @@ mod tests {
             .eq([P::D3, P::D4, P::D5, P::E4]));
 
         assert!(board.flip_candidates().eq([P::C3, P::C5, P::E3]));
-        let (count, board) = board.flipped(P::C5).unwrap();
-        assert_eq!(count.get(), 2);
+        let board = board.flipped(P::C5).unwrap();
         assert!(board.mine_disks.into_iter().eq([P::D3, P::D4, P::E4]));
         assert!(board.others_disks.into_iter().eq([P::C5, P::D5, P::E5]));
 
@@ -205,7 +198,7 @@ mod tests {
         let hands = [P::D3, P::C3, P::F5, P::D2, P::D1, P::E1, P::B2, P::C1];
 
         for hand in hands {
-            board = board.flipped(hand).unwrap().1;
+            board = board.flipped(hand).unwrap();
         }
         assert!(!board.can_play());
         board = board.passed();
