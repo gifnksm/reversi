@@ -1,23 +1,25 @@
-use crate::{Board, Color, Pos};
+use crate::{Board, Color, Disk, Pos};
 
 #[derive(Debug, Clone)]
 pub struct Game {
     state: GameState,
     board: Board,
+    turn_color: Color,
     history: Vec<Board>,
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum GameState {
-    Turn(u32, Color),
-    GameOver(u32),
+enum GameState {
+    Turn,
+    GameOver,
 }
 
 impl Default for Game {
     fn default() -> Self {
         Self {
-            state: GameState::Turn(1, Color::Black),
+            state: GameState::Turn,
             board: Board::default(),
+            turn_color: Color::Black,
             history: vec![],
         }
     }
@@ -43,43 +45,73 @@ impl Game {
         }
     }
 
-    pub fn state(&self) -> &GameState {
-        &self.state
+    fn is_game_over(&self) -> bool {
+        match self.state {
+            GameState::Turn => false,
+            GameState::GameOver => true,
+        }
     }
 
     pub fn board(&self) -> &Board {
         &self.board
     }
 
-    pub fn color(&self) -> Option<Color> {
-        match self.state {
-            GameState::Turn(_, color) => Some(color),
-            GameState::GameOver(_) => None,
+    pub fn turn(&self) -> u32 {
+        self.board.count_all_disks()
+    }
+
+    pub fn turn_color(&self) -> Option<Color> {
+        if self.is_game_over() {
+            return None;
+        }
+        Some(self.turn_color)
+    }
+
+    fn disk2color(&self, disk: Disk) -> Color {
+        match disk {
+            Disk::Mine => self.turn_color,
+            Disk::Others => self.turn_color.reverse(),
         }
     }
 
-    pub fn put(&mut self, pos: Pos) -> Result<(), PutError> {
-        let (turn, color) = match self.state {
-            GameState::Turn(turn, color) => (turn, color),
-            GameState::GameOver(_) => return Err(PutError::GameOver),
-        };
-
-        let (count, flipped) = self.board.flipped(color, pos);
-        if count == 0 {
-            return Err(PutError::CannotPut(pos));
+    fn color2disk(&self, color: Color) -> Disk {
+        if color == self.turn_color {
+            Disk::Mine
+        } else {
+            Disk::Others
         }
+    }
+
+    pub fn count_disk(&self, color: Option<Color>) -> u32 {
+        let disk = color.map(|color| self.color2disk(color));
+        self.board.count_disk(disk)
+    }
+
+    pub fn get_disk(&self, pos: Pos) -> Option<Color> {
+        self.board.get_disk(pos).map(|disk| self.disk2color(disk))
+    }
+
+    pub fn put_disk(&mut self, pos: Pos) -> Result<(), PutError> {
+        if self.is_game_over() {
+            return Err(PutError::GameOver);
+        }
+
+        let (_count, flipped) = self.board.flipped(pos).ok_or(PutError::CannotPut(pos))?;
 
         self.history.push(self.board);
-        self.board = flipped;
 
-        if self.board.can_play(color.reverse()) {
-            self.state = GameState::Turn(turn + 1, color.reverse());
-            return Ok(());
+        self.board = flipped;
+        self.turn_color = self.turn_color.reverse();
+
+        for _ in 0..2 {
+            if self.board.can_play() {
+                return Ok(());
+            }
+            self.board = self.board.passed();
+            self.turn_color = self.turn_color.reverse();
         }
-        if self.board.can_play(color) {
-            return Ok(());
-        }
-        self.state = GameState::GameOver(turn + 1);
+
+        self.state = GameState::GameOver;
         Ok(())
     }
 }

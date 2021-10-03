@@ -1,6 +1,6 @@
 use argh::FromArgs;
 use reversi_com::WeightEvaluator;
-use reversi_core::{Board, Color, Pos};
+use reversi_core::{Board, Disk, Pos};
 use std::{
     fs::File,
     io::BufReader,
@@ -100,9 +100,9 @@ fn print_boards(pattern: &[Pos], scores: &[(u16, i16)]) {
             for x in x_range.clone() {
                 let p = Pos::from_xy(x, y).unwrap();
                 let board = Board::from_pattern_index(pattern, *index);
-                let mark = match board.get(p) {
-                    Some(Color::Black) => 'O',
-                    Some(Color::White) => 'X',
+                let mark = match board.get_disk(p) {
+                    Some(Disk::Mine) => 'O',
+                    Some(Disk::Others) => 'X',
                     None if pattern.contains(&p) => '_',
                     None => ' ',
                 };

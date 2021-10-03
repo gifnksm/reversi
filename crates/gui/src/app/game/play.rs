@@ -100,7 +100,7 @@ impl PlayState {
             GameState::Init => {}
             GameState::WaitHuman => {}
             GameState::WaitComputer(rx) => match rx.try_recv() {
-                Ok(next_move) => self.put(ui, next_move.best_pos.unwrap()),
+                Ok(next_move) => self.put(ui, next_move.chosen.unwrap().0),
                 Err(mpsc::TryRecvError::Empty) => {}
                 Err(mpsc::TryRecvError::Disconnected) => panic!(),
             },
@@ -109,7 +109,7 @@ impl PlayState {
     }
 
     fn put(&mut self, ui: &mut egui::Ui, pos: Pos) {
-        match self.game.put(pos) {
+        match self.game.put_disk(pos) {
             Ok(()) => self.update_state(ui),
             Err(e) => {
                 self.messages.push(e.to_string());
@@ -119,9 +119,9 @@ impl PlayState {
     }
 
     fn update_state(&mut self, ui: &mut egui::Ui) {
-        let color = match self.game.state() {
-            reversi_core::GameState::Turn(_, color) => *color,
-            reversi_core::GameState::GameOver(_) => {
+        let color = match self.game.turn_color() {
+            Some(color) => color,
+            None => {
                 self.state = GameState::GameOver;
                 return;
             }
@@ -140,7 +140,7 @@ impl PlayState {
                 let ctx = ui.ctx().clone();
                 let (tx, rx) = mpsc::channel();
                 thread::spawn(move || {
-                    tx.send(com.next_move(&*evaluator, &board, color)).unwrap();
+                    tx.send(com.next_move(&*evaluator, &board)).unwrap();
                     ctx.request_repaint();
                 });
                 self.state = GameState::WaitComputer(rx);
@@ -150,7 +150,7 @@ impl PlayState {
                 let pos = self
                     .game
                     .board()
-                    .flip_candidates(color)
+                    .flip_candidates()
                     .choose(&mut rng)
                     .unwrap();
                 self.put(ui, pos);
@@ -254,13 +254,13 @@ impl PlayState {
             .and_then(|pos| to_disk_pos(pos - origin - margin));
 
         // disk
-        let put_color = self.game.color();
+        let turn_color = self.game.turn_color();
         for y in 0..Board::SIZE {
             for x in 0..Board::SIZE {
                 let pos = Pos::from_xy(x, y).unwrap();
                 let mut circle = None;
 
-                if let Some(color) = self.game.board().get(pos) {
+                if let Some(color) = self.game.get_disk(pos) {
                     circle = match color {
                         Color::Black => Some(DISK_BLACK),
                         Color::White => Some(DISK_WHITE),
@@ -268,14 +268,14 @@ impl PlayState {
                 }
 
                 if is_human_turn {
-                    if let Some(put_color) = put_color {
-                        if self.game.board().can_flip(put_color, pos) {
+                    if let Some(turn_color) = turn_color {
+                        if self.game.board().can_flip(pos) {
                             let alpha = if hover_disk_pos == Some(pos) {
                                 0.8
                             } else {
                                 0.2
                             };
-                            let (mut fill, mut stroke) = match put_color {
+                            let (mut fill, mut stroke) = match turn_color {
                                 Color::Black => DISK_BLACK,
                                 Color::White => DISK_WHITE,
                             };

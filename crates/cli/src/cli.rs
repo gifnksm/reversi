@@ -1,5 +1,5 @@
 use crate::{player::Player, traits::ColorExt, Result};
-use reversi_core::{Board, Color, Game, GameState, Pos};
+use reversi_core::{Board, Color, Game, Pos};
 
 pub struct Cli {
     game: Game,
@@ -30,20 +30,22 @@ impl Cli {
         }
     }
 
-    pub fn state(&self) -> &GameState {
-        self.game.state()
+    pub fn turn(&self) -> u32 {
+        self.game.turn()
+    }
+
+    pub fn turn_color(&self) -> Option<Color> {
+        self.game.turn_color()
     }
 
     pub fn do_turn(&mut self, color: Color) -> Result<()> {
         let board = *self.game.board();
         let pos = self.player_mut(color).next_move(&board)?;
-        self.game.put(pos)?;
+        self.game.put_disk(pos)?;
         Ok(())
     }
 
-    pub fn print_board(&self, color: Option<Color>) {
-        let board = self.game.board();
-
+    pub fn print_board(&self) {
         eprintln!();
         eprint!(" ");
         for ch in ('A'..).take(Board::SIZE as usize) {
@@ -56,12 +58,13 @@ impl Cli {
             for x in 0..Board::SIZE {
                 let pos = Pos::from_xy(x, y).unwrap();
                 eprint!(" ");
-                match board.get(pos) {
+                match self.game.get_disk(pos) {
                     Some(color) => eprint!("{}", color.mark()),
                     None => {
-                        let ch = match color {
-                            Some(color) if board.can_flip(color, pos) => '*',
-                            _ => '.',
+                        let ch = if self.game.board().can_flip(pos) {
+                            '*'
+                        } else {
+                            '.'
                         };
                         eprint!("{}", ch);
                     }
@@ -73,12 +76,12 @@ impl Cli {
     }
 
     pub fn print_score(&self, your_color: Option<Color>) {
-        fn print(board: &Board, target_color: Color, your_color: Option<Color>) {
+        for target_color in [Color::Black, Color::White] {
             let target_mark = target_color.mark();
             eprintln!(
                 "  {} : {:2} {}",
                 target_mark,
-                board.count(Some(target_color)),
+                self.game.count_disk(Some(target_color)),
                 if Some(target_color) == your_color {
                     "(you)"
                 } else {
@@ -86,20 +89,14 @@ impl Cli {
                 }
             );
         }
-
-        let board = self.game.board();
-        print(board, Color::Black, your_color);
-        print(board, Color::White, your_color);
         eprintln!();
     }
 
     pub fn print_result(&self) {
-        let board = self.game.board();
-
         eprintln!();
 
-        let black = board.count(Some(Color::Black));
-        let white = board.count(Some(Color::White));
+        let black = self.game.count_disk(Some(Color::Black));
+        let white = self.game.count_disk(Some(Color::White));
         let winner = match black.cmp(&white) {
             std::cmp::Ordering::Less => Some(self.player(Color::White)),
             std::cmp::Ordering::Equal => None,

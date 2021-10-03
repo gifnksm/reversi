@@ -35,11 +35,11 @@ impl Player for Human {
     }
 
     fn next_move(&mut self, board: &Board) -> Result<Pos> {
-        let candidate = board.flip_candidates(self.color).next().unwrap();
+        let candidate = board.flip_candidates().next().unwrap();
 
         crate::read_input("Input position to put a disk", Some(candidate), &[], |s| {
             let pos = s.parse()?;
-            if !board.can_flip(self.color, pos) {
+            if !board.can_flip(pos) {
                 return Err(format!("cannot put a disk at{}", pos).into());
             }
             Ok(pos)
@@ -108,12 +108,12 @@ impl Player for Computer {
         eprintln!("Computer thinking...");
         let start = Instant::now();
         let NextMove {
-            best_pos,
+            chosen,
             score,
             visited_nodes,
-        } = self.com.next_move(&self.evaluator, board, self.color);
+        } = self.com.next_move(&self.evaluator, board);
         let elapsed = start.elapsed();
-        let best_pos = best_pos.ok_or("cannot find a pos to put")?;
+        let (best_pos, _) = chosen.ok_or("cannot find a pos to put")?;
 
         eprintln!("Computer's choice: {}", best_pos);
         eprintln!("Evaluation score: {}", score);
@@ -171,7 +171,7 @@ impl Player for Random {
 
     fn next_move(&mut self, board: &Board) -> Result<Pos> {
         let pos = board
-            .flip_candidates(self.color)
+            .flip_candidates()
             .choose(&mut self.rng)
             .ok_or("cannot find a pos to put")?;
         Ok(pos)

@@ -136,8 +136,8 @@ fn main() -> Result<(), Error> {
                 .map(|_| play_game(&evaluator, &com))
                 .collect::<Vec<_>>()
                 .into_iter()
-                .for_each(|(board, history, elapsed, visited_nodes)| {
-                    let avg_dist = update(&mut updater, &board, &history);
+                .for_each(|(history, elapsed, visited_nodes)| {
+                    let avg_dist = update(&mut updater, &history);
                     summary.add_result(elapsed, visited_nodes, avg_dist);
                 });
             updater.flush();
@@ -186,10 +186,7 @@ fn write_evaluator(args: &Args, evaluator: &WeightEvaluator) -> Result<(), Error
     Ok(())
 }
 
-fn play_game(
-    evaluator: &WeightEvaluator,
-    com: &Com,
-) -> (Board, Vec<(Board, Color)>, Duration, u32) {
+fn play_game(evaluator: &WeightEvaluator, com: &Com) -> (Vec<(Board, Color)>, Duration, u32) {
     let mut rng = rand::thread_rng();
     let mut board = Board::new();
     let mut color = Color::Black;
@@ -199,58 +196,70 @@ fn play_game(
     let mut history = Vec::with_capacity(64);
 
     for _ in 0..8 {
-        if let Some(pos) = board.flip_candidates(color).choose(&mut rng) {
-            board = board.flipped(color, pos).1;
-            history.push((board, color));
-        }
-        color = color.reverse();
-    }
-
-    loop {
-        let pos = if board.count(None) > 12 && rng.gen_ratio(1, 100) {
-            board.flip_candidates(color).choose(&mut rng)
-        } else {
-            let start = Instant::now();
-            let next_move = com.next_move(evaluator, &board, color);
-            let elapsed = start.elapsed();
-            total_duration += elapsed;
-            total_visited_nodes += next_move.visited_nodes;
-            next_move.best_pos
-        };
-        match pos {
-            Some(pos) => {
-                board = board.flipped(color, pos).1;
+        match board.all_flipped().choose(&mut rng) {
+            Some((_, flipped)) => {
                 history.push((board, color));
+                board = flipped;
                 color = color.reverse();
             }
             None => {
+                board = board.passed();
                 color = color.reverse();
-                if !board.can_play(color) {
+            }
+        }
+    }
+
+    loop {
+        let chosen = if board.count_disk(None) > 12 && rng.gen_ratio(1, 100) {
+            board.all_flipped().choose(&mut rng)
+        } else {
+            let start = Instant::now();
+            let next_move = com.next_move(evaluator, &board);
+            let elapsed = start.elapsed();
+            total_duration += elapsed;
+            total_visited_nodes += next_move.visited_nodes;
+            next_move.chosen
+        };
+        match chosen {
+            Some((_pos, flipped)) => {
+                history.push((board, color));
+                board = flipped;
+                color = color.reverse();
+            }
+            None => {
+                board = board.passed();
+                color = color.reverse();
+                if !board.can_play() {
+                    board = board.passed();
+                    color = color.reverse();
                     break;
                 }
             }
         }
     }
-    (board, history, total_duration, total_visited_nodes)
+    history.push((board, color));
+    assert!(!board.can_play() && (!board.passed().can_play()));
+    (history, total_duration, total_visited_nodes)
 }
 
-fn update(updater: &mut WeightUpdater, board: &Board, history: &[(Board, Color)]) -> i32 {
-    let result = updater.evaluator().evaluate(board, Color::Black, true);
+fn update(updater: &mut WeightUpdater, history: &[(Board, Color)]) -> i32 {
+    let mut history = history.iter().rev().copied();
 
-    let mut history = history.iter().rev();
-    let mut board = *board;
-    while board.count(None) < 8 {
+    let (mut board, last_color) = history.next().unwrap();
+    let result = updater.evaluator().evaluate(&board, true);
+
+    while board.count_disk(None) < 8 {
         board = history.next().unwrap().0;
     }
 
     let mut total_dist = 0;
     let mut count = 0;
-    for _ in (board.count(None) as i8)..(Board::SIZE * Board::SIZE - 12) {
+    for _ in (board.count_disk(None) as i8)..(Board::SIZE * Board::SIZE - 12) {
         let (board, color) = history.next().unwrap();
-        let diff = if *color == Color::Black {
-            updater.update(board, result)
+        let diff = if color == last_color {
+            updater.update(&board, result)
         } else {
-            updater.update(&board.reverse(), -result)
+            updater.update(&board, -result)
         };
         total_dist += diff.abs();
         count += 1;

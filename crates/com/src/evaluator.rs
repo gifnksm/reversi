@@ -1,4 +1,4 @@
-use reversi_core::{Board, Color};
+use reversi_core::Board;
 
 pub use self::{count::*, weight::*};
 
@@ -8,5 +8,5 @@ mod weight;
 const DISK_VALUE: i16 = 1000;
 
 pub trait Evaluate {
-    fn evaluate(&self, board: &Board, color: Color, game_over: bool) -> i32;
+    fn evaluate(&self, board: &Board, game_over: bool) -> i32;
 }

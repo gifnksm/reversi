@@ -1,5 +1,5 @@
 use super::{CountEvaluator, Evaluate, DISK_VALUE};
-use reversi_core::{Board, Color, Pos};
+use reversi_core::{Board, Pos};
 use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
 use std::io::{Read, Write};
@@ -96,7 +96,7 @@ impl Weight {
 }
 
 fn board_parity_index(board: &Board) -> usize {
-    (board.count(None) % 2) as usize
+    (board.count_disk(None) % 2) as usize
 }
 
 #[derive(Debug, Default, Clone)]
@@ -142,9 +142,9 @@ impl WeightEvaluator {
 }
 
 impl Evaluate for WeightEvaluator {
-    fn evaluate(&self, board: &Board, color: Color, game_over: bool) -> i32 {
+    fn evaluate(&self, board: &Board, game_over: bool) -> i32 {
         if game_over {
-            self.count_evaluator.evaluate(board, color, game_over)
+            self.count_evaluator.evaluate(board, game_over)
         } else {
             self.compute_value(board)
         }

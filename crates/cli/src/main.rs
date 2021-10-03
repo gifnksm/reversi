@@ -4,7 +4,7 @@ use crate::{
     traits::ColorExt,
 };
 use reversi_com::WeightEvaluator;
-use reversi_core::{Board, Color, Game, GameState};
+use reversi_core::{Board, Color, Game};
 use std::{
     fmt,
     fs::File,
@@ -27,8 +27,9 @@ fn main() -> Result<()> {
     let mut cli = Cli::new(game, black_player, white_player);
 
     loop {
-        match *cli.state() {
-            GameState::Turn(turn, color) => {
+        let turn = cli.turn();
+        match cli.turn_color() {
+            Some(color) => {
                 let player = cli.player(color);
                 eprintln!();
                 eprintln!(
@@ -37,14 +38,14 @@ fn main() -> Result<()> {
                     color.mark(),
                     player.name()
                 );
-                cli.print_board(Some(color));
+                cli.print_board();
                 cli.print_score(Some(color));
                 cli.do_turn(color)?;
             }
-            GameState::GameOver(turn) => {
+            None => {
                 eprintln!();
                 eprintln!("=== Turn #{}: Game Over ===", turn);
-                cli.print_board(None);
+                cli.print_board();
                 cli.print_score(None);
                 cli.print_result();
                 break;
