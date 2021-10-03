@@ -1,21 +1,21 @@
-pub trait IterOnes: Sized {
-    fn iter_ones(&self) -> Ones<Self>;
+pub trait IterOneBits: Sized {
+    fn iter_one_bits(&self) -> OneBits<Self>;
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct Ones<T>(T);
+pub struct OneBits<T>(T);
 
 macro_rules! impl_ones {
     ($($ty:ident),* $(,)?) => {
         $(
-            impl IterOnes for $ty {
-                fn iter_ones(&self) -> Ones<Self> {
-                    Ones(*self)
+            impl IterOneBits for $ty {
+                fn iter_one_bits(&self) -> OneBits<Self> {
+                    OneBits(*self)
                 }
             }
 
-            impl Iterator for Ones<$ty> {
-                type Item = u32;
+            impl Iterator for OneBits<$ty> {
+                type Item = $ty;
 
                 fn next(&mut self) -> Option<Self::Item> {
                     if self.0 == 0 {
@@ -24,7 +24,7 @@ macro_rules! impl_ones {
                     let idx = self.0.trailing_zeros();
                     let bit = 1 << idx;
                     self.0 &= !bit;
-                    Some(idx)
+                    Some(bit)
                 }
 
                 fn size_hint(&self) -> (usize, Option<usize>) {
@@ -33,7 +33,7 @@ macro_rules! impl_ones {
                 }
             }
 
-            impl DoubleEndedIterator for Ones<$ty> {
+            impl DoubleEndedIterator for OneBits<$ty> {
                 fn next_back(&mut self) -> Option<Self::Item> {
                     if self.0 == 0 {
                         return None;
@@ -41,11 +41,11 @@ macro_rules! impl_ones {
                     let idx = $ty::BITS - self.0.leading_zeros() - 1;
                     let bit = 1 << idx;
                     self.0 &= !bit;
-                    Some(idx)
+                    Some(bit)
                 }
             }
 
-            impl ExactSizeIterator for Ones<$ty> {}
+            impl ExactSizeIterator for OneBits<$ty> {}
         )*
     };
 }
@@ -57,9 +57,9 @@ mod test {
 
     #[test]
     fn iter_ones() {
-        (0b10101u8).iter_ones().eq([0, 2, 4]);
-        (0b10101u8).iter_ones().rev().eq([4, 2, 0]);
-        0u8.iter_ones().eq([]);
-        0u8.iter_ones().rev().eq([]);
+        (0b10101u8).iter_one_bits().eq([1, 1 << 2, 1 << 4]);
+        (0b10101u8).iter_one_bits().rev().eq([1 << 4, 1 << 2, 0]);
+        0u8.iter_one_bits().eq([]);
+        0u8.iter_one_bits().rev().eq([]);
     }
 }

@@ -1,13 +1,13 @@
 use super::Board;
-use crate::traits::{IterOnes, Ones};
+use crate::traits::{IterOneBits, OneBits};
 use std::{fmt, iter::FromIterator, num::ParseIntError, str::FromStr};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Pos(i8);
+pub struct Pos(u64);
 
 impl fmt::Debug for Pos {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}({})", self, self.0)
+        <Self as fmt::Display>::fmt(self, f)
     }
 }
 
@@ -99,7 +99,7 @@ impl Pos {
 
     pub const fn from_xy(x: i8, y: i8) -> Option<Self> {
         if 0 <= x && x < Board::SIZE && 0 <= y && y < Board::SIZE {
-            Some(Self(x + Board::SIZE * y))
+            Some(Self(1 << (x + Board::SIZE * y)))
         } else {
             None
         }
@@ -107,22 +107,22 @@ impl Pos {
 
     const fn from_index(index: i8) -> Option<Self> {
         if 0 <= index && index < (Board::SIZE * Board::SIZE) {
-            Some(Self(index))
+            Some(Self(1 << index))
         } else {
             None
         }
     }
 
     const fn bit(&self) -> PosSet {
-        PosSet(1 << self.0)
+        PosSet(self.0)
     }
 
     pub const fn x(&self) -> i8 {
-        self.0 % Board::SIZE
+        (self.0.trailing_zeros() as i8) % Board::SIZE
     }
 
     pub const fn y(&self) -> i8 {
-        self.0 / Board::SIZE
+        self.0.trailing_zeros() as i8 / Board::SIZE
     }
 
     pub(crate) fn flip_lines(&self) -> &'static FlipLines {
@@ -312,19 +312,18 @@ impl IntoIterator for PosSet {
     type IntoIter = PosSetIter;
 
     fn into_iter(self) -> Self::IntoIter {
-        PosSetIter(self.0.iter_ones())
+        PosSetIter(self.0.iter_one_bits())
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct PosSetIter(Ones<u64>);
+pub struct PosSetIter(OneBits<u64>);
 
 impl Iterator for PosSetIter {
     type Item = Pos;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let idx = self.0.next()?;
-        Pos::from_index(idx as i8)
+        Some(Pos(self.0.next()?))
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
