@@ -99,7 +99,7 @@ impl Pos {
 
     pub const fn from_xy(x: i8, y: i8) -> Option<Self> {
         if 0 <= x && x < Board::SIZE && 0 <= y && y < Board::SIZE {
-            Some(Self(x * Board::SIZE + y))
+            Some(Self(x + Board::SIZE * y))
         } else {
             None
         }
@@ -118,11 +118,11 @@ impl Pos {
     }
 
     pub const fn x(&self) -> i8 {
-        self.0 / Board::SIZE
+        self.0 % Board::SIZE
     }
 
     pub const fn y(&self) -> i8 {
-        self.0 % Board::SIZE
+        self.0 / Board::SIZE
     }
 
     pub(crate) fn flip_lines(&self) -> &'static FlipLines {
@@ -398,7 +398,7 @@ mod tests {
 
     #[test]
     fn ord() {
-        let sorted = [Pos::A1, Pos::A2, Pos::A3, Pos::B3, Pos::C1];
+        let sorted = [Pos::A1, Pos::C1, Pos::A2, Pos::A3, Pos::B3];
         let mut cloned = sorted;
         cloned.sort();
         assert_eq!(sorted, cloned);

@@ -171,7 +171,7 @@ mod tests {
         use Pos as P;
 
         let board = Board::new();
-        assert!(board.flip_candidates().eq([P::C4, P::D3, P::E6, P::F5]));
+        assert!(board.flip_candidates().eq([P::D3, P::C4, P::F5, P::E6]));
 
         assert_eq!(board.flipped(P::A1), None);
         let board = board.flipped(P::D3).unwrap();
@@ -179,9 +179,9 @@ mod tests {
         assert!(board
             .others_disks
             .into_iter()
-            .eq([P::D3, P::D4, P::D5, P::E4]));
+            .eq([P::D3, P::D4, P::E4, P::D5]));
 
-        assert!(board.flip_candidates().eq([P::C3, P::C5, P::E3]));
+        assert!(board.flip_candidates().eq([P::C3, P::E3, P::C5]));
         let board = board.flipped(P::C5).unwrap();
         assert!(board.mine_disks.into_iter().eq([P::D3, P::D4, P::E4]));
         assert!(board.others_disks.into_iter().eq([P::C5, P::D5, P::E5]));
