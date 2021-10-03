@@ -132,13 +132,6 @@ impl Board {
         self.flip_candidates().next().is_some()
     }
 
-    pub fn game_over(&self) -> bool {
-        self.count_disk(None) == 0
-            || self.count_disk(Some(Disk::Mine)) == 0
-            || self.count_disk(Some(Disk::Others)) == 0
-            || (!self.can_play() && !self.passed().can_play())
-    }
-
     pub fn from_pattern_index(pattern: &[Pos], index: u16) -> Self {
         let mut board = Self::empty();
         let mut n = index;

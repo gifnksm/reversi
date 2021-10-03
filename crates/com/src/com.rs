@@ -42,6 +42,7 @@ impl Com {
         depth: u32,
         (alpha, beta): (i32, i32),
     ) -> NextMove {
+        let alpha_beta = alpha_beta::<_, true>;
         let mut visited_nodes = 0;
         let (score, chosen) = alpha_beta(
             evaluator,
@@ -59,6 +60,8 @@ impl Com {
     }
 
     fn mid_search(&self, evaluator: &impl Evaluate, board: &Board, depth: u32) -> NextMove {
+        let alpha_beta = alpha_beta::<_, false>;
+
         let mut visited_nodes = 0;
         let (score, chosen) = alpha_beta(
             evaluator,
@@ -76,17 +79,23 @@ impl Com {
     }
 }
 
-fn alpha_beta(
-    evaluator: &impl Evaluate,
+fn alpha_beta<E, const END_SEARCH: bool>(
+    evaluator: &E,
     board: &Board,
     depth: u32,
     (mut alpha, beta): (i32, i32),
     in_pass: bool,
     visited_nodes: &mut u32,
-) -> (i32, Option<(Pos, Board)>) {
+) -> (i32, Option<(Pos, Board)>)
+where
+    E: Evaluate,
+{
+    let alpha_beta = alpha_beta::<E, END_SEARCH>;
+
     if depth == 0 {
         *visited_nodes += 1;
-        return (evaluator.evaluate(board, board.game_over()), None);
+        let game_over = END_SEARCH;
+        return (evaluator.evaluate(board, game_over), None);
     }
 
     let mut has_candidate = false;
@@ -138,16 +147,22 @@ fn alpha_beta(
 }
 
 #[cfg(test)]
-fn nega_max(
-    evaluator: &impl Evaluate,
+fn nega_max<E, const END_SEARCH: bool>(
+    evaluator: &E,
     board: &Board,
     depth: u32,
     in_pass: bool,
     visited_nodes: &mut u32,
-) -> (i32, Option<(Pos, Board)>) {
+) -> (i32, Option<(Pos, Board)>)
+where
+    E: Evaluate,
+{
+    let nega_max = nega_max::<E, END_SEARCH>;
+
     if depth == 0 {
         *visited_nodes += 1;
-        return (evaluator.evaluate(board, board.game_over()), None);
+        let game_over = END_SEARCH;
+        return (evaluator.evaluate(board, game_over), None);
     }
 
     let mut max = i32::MIN;
@@ -210,6 +225,8 @@ mod tests {
 
     #[test]
     fn comp_com() {
+        let alpha_beta = alpha_beta::<_, false>;
+        let nega_max = nega_max::<_, false>;
         let evaluator = DummyEvaluator(CountEvaluator::new());
         let depth = 3;
 
