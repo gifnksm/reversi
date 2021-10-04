@@ -81,19 +81,6 @@ impl Board {
         self.mine_disks.count() + self.others_disks.count()
     }
 
-    pub fn flipped(&self, pos: Pos) -> Option<Self> {
-        if (self.mine_disks | self.others_disks).contains(&pos) {
-            return None;
-        }
-        let flipped = pos
-            .flip_lines()
-            .flipped(&self.mine_disks, &self.others_disks);
-        (!flipped.is_empty()).then(|| Board {
-            mine_disks: self.others_disks & !flipped,
-            others_disks: self.mine_disks | flipped,
-        })
-    }
-
     pub fn reverse(&self) -> Self {
         Board {
             mine_disks: self.others_disks,
@@ -101,18 +88,88 @@ impl Board {
         }
     }
 
+    fn flipped_set(&self, pos: Pos) -> PosSet {
+        debug_assert!(!(self.mine_disks | self.others_disks).contains(&pos));
+        let top_bottom_mask = PosSet::ALL;
+        let left_right_mask = !(PosSet::new()
+            | (Pos::A1 | Pos::A2 | Pos::A3 | Pos::A4 | Pos::A5 | Pos::A6 | Pos::A7 | Pos::A8)
+            | (Pos::H1 | Pos::H2 | Pos::H3 | Pos::H4 | Pos::H5 | Pos::H6 | Pos::H7 | Pos::H8));
+        let pos = PosSet::new() | pos;
+
+        let right_moves = |mask, offset| {
+            let e = self.others_disks & mask;
+            let mut m = (pos << offset) & e;
+            m |= (m << offset) & e;
+            m |= (m << offset) & e;
+            m |= (m << offset) & e;
+            m |= (m << offset) & e;
+            m |= (m << offset) & e;
+            let mut o = (self.mine_disks >> offset) & e;
+            o |= (o >> offset) & e;
+            o |= (o >> offset) & e;
+            o |= (o >> offset) & e;
+            o |= (o >> offset) & e;
+            o |= (o >> offset) & e;
+            m & o
+        };
+
+        let left_moves = |mask, offset| {
+            let e = self.others_disks & mask;
+            let mut m = (pos >> offset) & e;
+            m |= (m >> offset) & e;
+            m |= (m >> offset) & e;
+            m |= (m >> offset) & e;
+            m |= (m >> offset) & e;
+            m |= (m >> offset) & e;
+            let mut o = (self.mine_disks << offset) & e;
+            o |= (o << offset) & e;
+            o |= (o << offset) & e;
+            o |= (o << offset) & e;
+            o |= (o << offset) & e;
+            o |= (o << offset) & e;
+            m & o
+        };
+
+        let flipped = left_moves(left_right_mask, 1)
+            | left_moves(left_right_mask, 9)
+            | left_moves(top_bottom_mask, 8)
+            | left_moves(left_right_mask, 7)
+            | right_moves(left_right_mask, 1)
+            | right_moves(left_right_mask, 9)
+            | right_moves(top_bottom_mask, 8)
+            | right_moves(left_right_mask, 7);
+
+        debug_assert!((self.mine_disks & flipped).is_empty());
+        debug_assert_eq!(self.others_disks & flipped, flipped);
+
+        flipped
+    }
+
+    pub fn flipped(&self, pos: Pos) -> Option<Self> {
+        if (self.mine_disks | self.others_disks).contains(&pos) {
+            return None;
+        }
+
+        let flipped = self.flipped_set(pos);
+        (!flipped.is_empty()).then(|| Board {
+            mine_disks: self.others_disks ^ flipped,
+            others_disks: self.mine_disks ^ flipped ^ pos,
+        })
+    }
+
     pub fn all_flipped(&self) -> impl Iterator<Item = (Pos, Board)> + '_ {
-        self.flip_candidates()
-            .into_iter()
-            .map(move |pos| (pos, self.flipped(pos).unwrap()))
+        self.flip_candidates().into_iter().map(move |pos| {
+            let flipped = self.flipped_set(pos);
+            let board = Self {
+                mine_disks: self.others_disks ^ flipped,
+                others_disks: self.mine_disks ^ flipped ^ pos,
+            };
+            (pos, board)
+        })
     }
 
     pub fn can_flip(&self, pos: Pos) -> bool {
-        if (self.mine_disks | self.others_disks).contains(&pos) {
-            return false;
-        }
-        pos.flip_lines()
-            .can_flip(&self.mine_disks, &self.others_disks)
+        !(self.mine_disks | self.others_disks).contains(&pos) && !self.flipped_set(pos).is_empty()
     }
 
     pub fn flip_candidates(&self) -> PosSet {

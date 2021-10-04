@@ -130,62 +130,7 @@ impl Pos {
     pub const fn y(&self) -> i8 {
         self.0.trailing_zeros() as i8 / Board::SIZE
     }
-
-    pub(crate) fn flip_lines(&self) -> &'static FlipLines {
-        flip_lines::flip_lines(*self)
-    }
 }
-
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct FlipLines {
-    pos: Pos,
-    lines: &'static [&'static [Pos]],
-    self_mask: PosSet,
-    other_mask: PosSet,
-}
-
-impl FlipLines {
-    pub(crate) fn flipped(&self, self_set: &PosSet, other_set: &PosSet) -> PosSet {
-        if (*self_set & self.self_mask).is_empty() || (*other_set & self.other_mask).is_empty() {
-            return PosSet::new();
-        }
-        let mut flipped = PosSet::new();
-        for &line in self.lines {
-            let s = Self::line_flipped(self_set, other_set, line);
-            flipped |= s;
-        }
-        if !flipped.is_empty() {
-            flipped |= self.pos;
-        }
-        flipped
-    }
-
-    pub(crate) fn can_flip(&self, self_set: &PosSet, other_set: &PosSet) -> bool {
-        !(*self_set & self.self_mask).is_empty()
-            && !(*other_set & self.other_mask).is_empty()
-            && self.lines.iter().any(|line| {
-                let f = Self::line_flipped(self_set, other_set, line);
-                !f.is_empty()
-            })
-    }
-
-    fn line_flipped(self_set: &PosSet, other_set: &PosSet, line: &[Pos]) -> PosSet {
-        let mut flipped = PosSet::new();
-        for pos in line.iter().copied() {
-            if other_set.contains(&pos) {
-                flipped |= pos;
-                continue;
-            }
-            if self_set.contains(&pos) {
-                return flipped;
-            }
-            break;
-        }
-        PosSet::new()
-    }
-}
-
-include!(concat!(env!("OUT_DIR"), "/flip_lines.rs"));
 
 #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PosSet(u64);
