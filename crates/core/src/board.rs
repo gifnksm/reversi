@@ -96,7 +96,7 @@ impl Board {
         }
     }
 
-    fn flipped_set(&self, pos: Pos) -> PosSet {
+    fn flipped_set_unchecked(&self, pos: Pos) -> PosSet {
         debug_assert!(!(self.mine_disks | self.others_disks).contains(&pos));
         let top_bottom_mask = PosSet::ALL;
         let left_right_mask = !(PosSet::new()
@@ -153,13 +153,17 @@ impl Board {
         flipped
     }
 
-    pub fn flipped(&self, pos: Pos) -> Option<Self> {
+    pub fn flipped_set(&self, pos: Pos) -> Option<PosSet> {
         if (self.mine_disks | self.others_disks).contains(&pos) {
             return None;
         }
 
-        let flipped = self.flipped_set(pos);
-        (!flipped.is_empty()).then(|| Board {
+        let flipped = self.flipped_set_unchecked(pos);
+        (!flipped.is_empty()).then(|| flipped)
+    }
+
+    pub fn flipped(&self, pos: Pos) -> Option<Self> {
+        self.flipped_set(pos).map(|flipped| Board {
             mine_disks: self.others_disks ^ flipped,
             others_disks: self.mine_disks ^ flipped ^ pos,
         })
@@ -167,7 +171,7 @@ impl Board {
 
     pub fn all_flipped(&self) -> impl Iterator<Item = (Pos, Board)> + '_ {
         self.flip_candidates().into_iter().map(move |pos| {
-            let flipped = self.flipped_set(pos);
+            let flipped = self.flipped_set_unchecked(pos);
             let board = Self {
                 mine_disks: self.others_disks ^ flipped,
                 others_disks: self.mine_disks ^ flipped ^ pos,
@@ -177,7 +181,8 @@ impl Board {
     }
 
     pub fn can_flip(&self, pos: Pos) -> bool {
-        !(self.mine_disks | self.others_disks).contains(&pos) && !self.flipped_set(pos).is_empty()
+        !(self.mine_disks | self.others_disks).contains(&pos)
+            && !self.flipped_set_unchecked(pos).is_empty()
     }
 
     pub fn flip_candidates(&self) -> PosSet {

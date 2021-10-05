@@ -94,6 +94,7 @@ pub(super) fn show(
     let hover_disk_pos = resp
         .hover_pos()
         .and_then(|pos| to_disk_pos(pos - origin - margin));
+    let hover_flipped_set = hover_disk_pos.and_then(|pos| game.board().flipped_set(pos));
     let clicked_disk_pos = resp
         .interact_pointer_pos()
         .and_then(|pos| to_disk_pos(pos - origin - margin));
@@ -139,6 +140,14 @@ pub(super) fn show(
         if let Some((fill, stroke)) = circle {
             painter.circle(center, DISK_RADIUS, fill, stroke);
         }
+
+        if hover_flipped_set
+            .map(|flipped| flipped.contains(&pos))
+            .unwrap_or_default()
+        {
+            painter.circle_stroke(center, FLIP_CANDIDATE_RADIUS, FLIP_CANDIDATE_STROKE);
+        }
+
         if Some(pos) == last_put {
             painter.circle_filled(center, PUT_MARKER_RADIUS, PUT_MARKER_FILL);
         }
@@ -176,6 +185,11 @@ const BOARD_SIZE: Vec2 = Vec2::new(
 );
 const PUT_MARKER_RADIUS: f32 = 3.0;
 const PUT_MARKER_FILL: Color32 = Color32::RED;
+const FLIP_CANDIDATE_STROKE: Stroke = Stroke {
+    width: 3.0,
+    color: Color32::RED,
+};
+const FLIP_CANDIDATE_RADIUS: f32 = DISK_RADIUS;
 
 fn to_disk_pos(pos: Vec2) -> Option<Pos> {
     if pos.clamp(Vec2::ZERO, BOARD_SIZE) != pos {
