@@ -18,6 +18,7 @@ pub(super) struct PlayState {
     computer1: Option<Computer>,
     computer2: Option<Computer>,
     game: Game,
+    last_put: Option<Pos>,
     messages: Vec<String>,
     state: GameState,
 }
@@ -81,6 +82,7 @@ impl PlayState {
             computer1,
             computer2,
             game: Game::new(),
+            last_put: None,
             messages: vec![],
             state: GameState::Init,
         }
@@ -110,7 +112,10 @@ impl PlayState {
 
     fn put(&mut self, ui: &mut egui::Ui, pos: Pos) {
         match self.game.put_disk(pos) {
-            Ok(()) => self.update_state(ui),
+            Ok(()) => {
+                self.last_put = Some(pos);
+                self.update_state(ui);
+            }
             Err(e) => {
                 self.messages.push(e.to_string());
                 ui.ctx().request_repaint();
@@ -287,14 +292,18 @@ impl PlayState {
                     }
                 }
 
+                let center = origin
+                    + margin
+                    + Vec2::new(
+                        CELL_SIZE.x * (x as f32 + 0.5),
+                        CELL_SIZE.y * (y as f32 + 0.5),
+                    );
+
                 if let Some((fill, stroke)) = circle {
-                    let center = origin
-                        + margin
-                        + Vec2::new(
-                            CELL_SIZE.x * (x as f32 + 0.5),
-                            CELL_SIZE.y * (y as f32 + 0.5),
-                        );
                     painter.circle(center, DISK_RADIUS, fill, stroke);
+                }
+                if Some(pos) == self.last_put {
+                    painter.circle_filled(center, PUT_MARKER_RADIUS, PUT_MARKER_FILL);
                 }
             }
         }
@@ -333,6 +342,8 @@ const BOARD_SIZE: Vec2 = Vec2::new(
     (CELL_SIZE.x) * Board::SIZE as f32,
     (CELL_SIZE.y) * Board::SIZE as f32,
 );
+const PUT_MARKER_RADIUS: f32 = 3.0;
+const PUT_MARKER_FILL: Color32 = Color32::RED;
 
 fn to_disk_pos(pos: Vec2) -> Option<Pos> {
     if pos.clamp(Vec2::ZERO, BOARD_SIZE) != pos {
