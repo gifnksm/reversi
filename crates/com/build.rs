@@ -102,7 +102,7 @@ fn main() -> Result<(), Error> {
         )?;
     }
 
-    writeln!(&mut writer, "pub(super) const NAMES: &[&'static str] = &[")?;
+    writeln!(&mut writer, "pub(super) const NAMES: &[&str] = &[")?;
     for (name, _) in PATTERNS {
         writeln!(&mut writer, "{:?},", name)?;
     }
