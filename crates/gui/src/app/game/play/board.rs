@@ -31,7 +31,7 @@ pub(super) fn show(
         egui::Sense::hover()
     };
 
-    let (resp, painter) = ui.allocate_painter(margin + BOARD_SIZE, sense);
+    let (resp, painter) = ui.allocate_painter(2. * margin + BOARD_SIZE, sense);
     let origin = painter.clip_rect().min;
 
     // background
@@ -80,10 +80,34 @@ pub(super) fn show(
             text_style,
             text_color,
         );
+        painter.text(
+            origin
+                + margin
+                + Vec2::new(
+                    CELL_SIZE.x * (x as f32 + 0.5),
+                    BOARD_SIZE.y + margin.y / 2.0,
+                ),
+            Align2::CENTER_CENTER,
+            ch,
+            text_style,
+            text_color,
+        );
     }
     for (ch, y) in ('1'..).take(Board::SIZE as usize).zip(0..) {
         painter.text(
             origin + margin + Vec2::new(-margin.x / 2.0, CELL_SIZE.y * (y as f32 + 0.5)),
+            Align2::CENTER_CENTER,
+            ch,
+            text_style,
+            text_color,
+        );
+        painter.text(
+            origin
+                + margin
+                + Vec2::new(
+                    BOARD_SIZE.x + margin.x / 2.0,
+                    CELL_SIZE.y * (y as f32 + 0.5),
+                ),
             Align2::CENTER_CENTER,
             ch,
             text_style,
