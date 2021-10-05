@@ -207,16 +207,11 @@ mod tests {
     impl Evaluate for DummyEvaluator {
         fn evaluate(&self, board: &Board, _game_over: bool) -> i32 {
             let mut value = 0;
-            for y in 0..Board::SIZE {
-                for x in 0..Board::SIZE {
-                    let pos = Pos::from_xy(x, y).unwrap();
-                    if let Some(disk) = board.get_disk(pos) {
-                        if disk == Disk::Mine {
-                            value += (x * Board::SIZE + y) as i32;
-                        } else {
-                            value -= (x * Board::SIZE + y) as i32;
-                        }
-                    }
+            for (disk, v) in board.disks().zip(0..) {
+                match disk {
+                    Some(Disk::Mine) => value += v,
+                    Some(Disk::Others) => value -= v,
+                    None => {}
                 }
             }
             value

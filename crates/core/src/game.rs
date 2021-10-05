@@ -1,4 +1,4 @@
-use crate::{Board, Color, Disk, Pos};
+use crate::{Board, Color, Disk, Pos, PosIter};
 
 #[derive(Debug, Clone)]
 pub struct Game {
@@ -87,6 +87,14 @@ impl Game {
         self.board.count_disk(disk)
     }
 
+    pub fn disks(&self) -> Disks {
+        Disks::new(self)
+    }
+
+    pub fn pos_disks(&self) -> PosDisks {
+        PosDisks::new(self)
+    }
+
     pub fn get_disk(&self, pos: Pos) -> Option<Color> {
         self.board.get_disk(pos).map(|disk| self.disk2color(disk))
     }
@@ -115,3 +123,75 @@ impl Game {
         Ok(())
     }
 }
+
+#[derive(Debug)]
+pub struct Disks<'a> {
+    game: &'a Game,
+    pos: PosIter,
+}
+
+impl<'a> Disks<'a> {
+    fn new(game: &'a Game) -> Self {
+        Self {
+            game,
+            pos: Pos::iter_all(),
+        }
+    }
+}
+
+impl Iterator for Disks<'_> {
+    type Item = Option<Color>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.pos.next().map(|pos| self.game.get_disk(pos))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.pos.size_hint()
+    }
+}
+
+impl DoubleEndedIterator for Disks<'_> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.pos.next_back().map(|pos| self.game.get_disk(pos))
+    }
+}
+
+impl ExactSizeIterator for Disks<'_> {}
+
+#[derive(Debug)]
+pub struct PosDisks<'a> {
+    game: &'a Game,
+    pos: PosIter,
+}
+
+impl<'a> PosDisks<'a> {
+    fn new(game: &'a Game) -> Self {
+        Self {
+            game,
+            pos: Pos::iter_all(),
+        }
+    }
+}
+
+impl Iterator for PosDisks<'_> {
+    type Item = (Pos, Option<Color>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.pos.next().map(|pos| (pos, self.game.get_disk(pos)))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.pos.size_hint()
+    }
+}
+
+impl DoubleEndedIterator for PosDisks<'_> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.pos
+            .next_back()
+            .map(|pos| (pos, self.game.get_disk(pos)))
+    }
+}
+
+impl ExactSizeIterator for PosDisks<'_> {}

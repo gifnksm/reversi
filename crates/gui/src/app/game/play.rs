@@ -261,50 +261,47 @@ impl PlayState {
 
         // disk
         let turn_color = self.game.turn_color();
-        for y in 0..Board::SIZE {
-            for x in 0..Board::SIZE {
-                let pos = Pos::from_xy(x, y).unwrap();
-                let mut circle = None;
+        for (pos, disk) in self.game.pos_disks() {
+            let mut circle = None;
 
-                if let Some(color) = self.game.get_disk(pos) {
-                    circle = match color {
-                        Color::Black => Some(DISK_BLACK),
-                        Color::White => Some(DISK_WHITE),
-                    };
-                }
+            if let Some(color) = disk {
+                circle = match color {
+                    Color::Black => Some(DISK_BLACK),
+                    Color::White => Some(DISK_WHITE),
+                };
+            }
 
-                if is_human_turn {
-                    if let Some(turn_color) = turn_color {
-                        if self.game.board().can_flip(pos) {
-                            let alpha = if hover_disk_pos == Some(pos) {
-                                0.8
-                            } else {
-                                0.2
-                            };
-                            let (mut fill, mut stroke) = match turn_color {
-                                Color::Black => DISK_BLACK,
-                                Color::White => DISK_WHITE,
-                            };
-                            fill = mix_color(fill, BOARD_BG_COLOR, alpha);
-                            stroke.color = mix_color(stroke.color, BOARD_BG_COLOR, alpha);
-                            circle = Some((fill, stroke));
-                        }
+            if is_human_turn {
+                if let Some(turn_color) = turn_color {
+                    if self.game.board().can_flip(pos) {
+                        let alpha = if hover_disk_pos == Some(pos) {
+                            0.8
+                        } else {
+                            0.2
+                        };
+                        let (mut fill, mut stroke) = match turn_color {
+                            Color::Black => DISK_BLACK,
+                            Color::White => DISK_WHITE,
+                        };
+                        fill = mix_color(fill, BOARD_BG_COLOR, alpha);
+                        stroke.color = mix_color(stroke.color, BOARD_BG_COLOR, alpha);
+                        circle = Some((fill, stroke));
                     }
                 }
+            }
 
-                let center = origin
-                    + margin
-                    + Vec2::new(
-                        CELL_SIZE.x * (x as f32 + 0.5),
-                        CELL_SIZE.y * (y as f32 + 0.5),
-                    );
+            let center = origin
+                + margin
+                + Vec2::new(
+                    CELL_SIZE.x * (pos.x() as f32 + 0.5),
+                    CELL_SIZE.y * (pos.y() as f32 + 0.5),
+                );
 
-                if let Some((fill, stroke)) = circle {
-                    painter.circle(center, DISK_RADIUS, fill, stroke);
-                }
-                if Some(pos) == self.last_put {
-                    painter.circle_filled(center, PUT_MARKER_RADIUS, PUT_MARKER_FILL);
-                }
+            if let Some((fill, stroke)) = circle {
+                painter.circle(center, DISK_RADIUS, fill, stroke);
+            }
+            if Some(pos) == self.last_put {
+                painter.circle_filled(center, PUT_MARKER_RADIUS, PUT_MARKER_FILL);
             }
         }
 

@@ -4,7 +4,7 @@ use std::{
     fmt,
     iter::FromIterator,
     num::ParseIntError,
-    ops::{Shl, Shr},
+    ops::{Range, Shl, Shr},
     str::FromStr,
 };
 
@@ -119,6 +119,10 @@ impl Pos {
         }
     }
 
+    pub fn iter_all() -> PosIter {
+        PosIter::new()
+    }
+
     const fn bit(&self) -> PosSet {
         PosSet(self.0)
     }
@@ -131,6 +135,35 @@ impl Pos {
         self.0.trailing_zeros() as i8 / Board::SIZE
     }
 }
+
+#[derive(Debug)]
+pub struct PosIter(Range<u8>);
+
+impl PosIter {
+    fn new() -> Self {
+        Self(0..64)
+    }
+}
+
+impl Iterator for PosIter {
+    type Item = Pos;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next().map(|n| Pos(1 << n))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.0.size_hint()
+    }
+}
+
+impl DoubleEndedIterator for PosIter {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.0.next_back().map(|n| Pos(1 << n))
+    }
+}
+
+impl ExactSizeIterator for PosIter {}
 
 #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PosSet(u64);
@@ -301,16 +334,6 @@ impl FromIterator<Pos> for PosSet {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn available_bits() {
-        let mut ava_bits = PosSet::new();
-        for y in 0..Board::SIZE {
-            for x in 0..Board::SIZE {
-                ava_bits |= Pos::from_xy(x, y).unwrap().bit();
-            }
-        }
-    }
 
     #[test]
     fn display() {

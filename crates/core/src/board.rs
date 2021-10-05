@@ -38,6 +38,14 @@ impl Board {
         }
     }
 
+    pub fn disks(&self) -> Disks {
+        Disks::new(self)
+    }
+
+    pub fn pos_disks(&self) -> PosDisks {
+        PosDisks::new(self)
+    }
+
     pub fn get_disk(&self, pos: Pos) -> Option<Disk> {
         debug_assert!((self.mine_disks & self.others_disks).is_empty());
         if self.mine_disks.contains(&pos) {
@@ -250,6 +258,78 @@ impl Board {
         n
     }
 }
+
+#[derive(Debug)]
+pub struct Disks<'a> {
+    board: &'a Board,
+    pos: PosIter,
+}
+
+impl<'a> Disks<'a> {
+    fn new(board: &'a Board) -> Self {
+        Self {
+            board,
+            pos: Pos::iter_all(),
+        }
+    }
+}
+
+impl Iterator for Disks<'_> {
+    type Item = Option<Disk>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.pos.next().map(|pos| self.board.get_disk(pos))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.pos.size_hint()
+    }
+}
+
+impl DoubleEndedIterator for Disks<'_> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.pos.next_back().map(|pos| self.board.get_disk(pos))
+    }
+}
+
+impl ExactSizeIterator for Disks<'_> {}
+
+#[derive(Debug)]
+pub struct PosDisks<'a> {
+    board: &'a Board,
+    pos: PosIter,
+}
+
+impl<'a> PosDisks<'a> {
+    fn new(board: &'a Board) -> Self {
+        Self {
+            board,
+            pos: Pos::iter_all(),
+        }
+    }
+}
+
+impl Iterator for PosDisks<'_> {
+    type Item = (Pos, Option<Disk>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.pos.next().map(|pos| (pos, self.board.get_disk(pos)))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.pos.size_hint()
+    }
+}
+
+impl DoubleEndedIterator for PosDisks<'_> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.pos
+            .next_back()
+            .map(|pos| (pos, self.board.get_disk(pos)))
+    }
+}
+
+impl ExactSizeIterator for PosDisks<'_> {}
 
 #[cfg(test)]
 mod tests {
