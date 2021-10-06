@@ -1,7 +1,18 @@
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct PlayerConf {
+    pub(crate) name: String,
     pub(crate) player_kind: PlayerKind,
     pub(crate) computer_kind: ComputerKind,
+}
+
+impl PlayerConf {
+    pub(crate) fn new(name: String) -> Self {
+        Self {
+            name,
+            player_kind: Default::default(),
+            computer_kind: Default::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -180,7 +180,7 @@ pub(super) fn show(
     clicked_disk_pos
 }
 
-const CELL_SIZE: Vec2 = Vec2::new(32.0, 32.0);
+pub(super) const CELL_SIZE: Vec2 = Vec2::splat(32.0);
 const BOARD_BG_COLOR: Color32 = Color32::from_rgb(0x00, 0x80, 0x00);
 const BOARD_STROKE_COLOR: Color32 = Color32::BLACK;
 const BOARD_STROKE: Stroke = Stroke {
@@ -188,22 +188,22 @@ const BOARD_STROKE: Stroke = Stroke {
     color: BOARD_STROKE_COLOR,
 };
 const DOT_RADIUS: f32 = 3.0;
-const DISK_RADIUS: f32 = 14.0;
-const DISK_BLACK: (Color32, Stroke) = (
+pub(super) const DISK_RADIUS: f32 = 14.0;
+pub(super) const DISK_BLACK: (Color32, Stroke) = (
     Color32::BLACK,
     Stroke {
         width: 0.1,
         color: Color32::BLACK,
     },
 );
-const DISK_WHITE: (Color32, Stroke) = (
+pub(super) const DISK_WHITE: (Color32, Stroke) = (
     Color32::WHITE,
     Stroke {
         width: 0.1,
         color: Color32::BLACK,
     },
 );
-const BOARD_SIZE: Vec2 = Vec2::new(
+pub(super) const BOARD_SIZE: Vec2 = Vec2::new(
     (CELL_SIZE.x) * Board::SIZE as f32,
     (CELL_SIZE.y) * Board::SIZE as f32,
 );

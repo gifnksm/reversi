@@ -1,11 +1,21 @@
 use super::{play::PlayState, GameState};
 use crate::player::{AiLevel, ComputerKind, PlayerConf, PlayerKind};
 use eframe::egui;
+use reversi_core::Color;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub(super) struct ConfigState {
     player1: PlayerConf,
     player2: PlayerConf,
+}
+
+impl Default for ConfigState {
+    fn default() -> Self {
+        Self {
+            player1: PlayerConf::new("Player 1".into()),
+            player2: PlayerConf::new("Player 2".into()),
+        }
+    }
 }
 
 impl ConfigState {
@@ -14,8 +24,8 @@ impl ConfigState {
 
         let mut new_state = None;
 
-        player_conf(ui, "Player 1", player1);
-        player_conf(ui, "Player 2", player2);
+        player_conf(ui, player1);
+        player_conf(ui, player2);
 
         ui.horizontal(|ui| {
             if ui.button("Play").clicked() {
@@ -29,6 +39,13 @@ impl ConfigState {
         new_state
     }
 
+    pub(super) fn player(&self, color: Color) -> &PlayerConf {
+        match color {
+            Color::Black => &self.player1,
+            Color::White => &self.player2,
+        }
+    }
+
     pub(super) fn player1(&self) -> &PlayerConf {
         &self.player1
     }
@@ -38,7 +55,7 @@ impl ConfigState {
     }
 }
 
-fn player_conf(ui: &mut egui::Ui, name: &str, conf: &mut PlayerConf) {
+fn player_conf(ui: &mut egui::Ui, conf: &mut PlayerConf) {
     const PLAYER_KIND: [(PlayerKind, &str); 2] = [
         (PlayerKind::Human, "Human"),
         (PlayerKind::Computer, "Computer"),
@@ -51,8 +68,8 @@ fn player_conf(ui: &mut egui::Ui, name: &str, conf: &mut PlayerConf) {
         (ComputerKind::Ai(AiLevel::Level4), "AI Level4"),
     ];
 
-    ui.heading(name);
-    egui::Grid::new(name)
+    ui.heading(&conf.name);
+    egui::Grid::new(&conf.name)
         .num_columns(2)
         .striped(true)
         .show(ui, |ui| {

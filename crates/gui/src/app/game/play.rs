@@ -1,10 +1,11 @@
 use super::config::ConfigState;
 use crate::player::{AiLevel, ComputerKind, PlayerConf, PlayerKind};
-use eframe::egui;
+use eframe::egui::{self, Align2, Pos2, Sense, TextStyle, Vec2};
 use rand::prelude::*;
 use reversi_com::{Com, NextMove, WeightEvaluator};
 use reversi_core::{Color, Game, Pos};
 use std::{
+    cmp::Ordering,
     fs::File,
     io::BufReader,
     path::Path,
@@ -96,10 +97,16 @@ impl PlayState {
         }
         self.check_status_updated(ui);
 
-        let is_human_turn = matches!(self.state, GameState::WaitHuman);
-        if let Some(pos) = board::show(ui, &self.game, is_human_turn, self.last_put) {
-            self.put(ui, pos);
-        }
+        ui.set_width(board::BOARD_SIZE.x + 50.0);
+        ui.vertical_centered(|ui| {
+            ui_score_board(ui, &self.game);
+            ui_game_status_label(ui, &self.game, &self.config);
+
+            let is_human_turn = matches!(self.state, GameState::WaitHuman);
+            if let Some(pos) = board::show(ui, &self.game, is_human_turn, self.last_put) {
+                self.put(ui, pos);
+            }
+        });
 
         None
     }
@@ -170,5 +177,66 @@ impl PlayState {
             }
             None => self.state = GameState::WaitHuman,
         };
+    }
+}
+
+fn ui_score_board(ui: &mut egui::Ui, game: &Game) {
+    let text_style = TextStyle::Heading;
+    let text_color = ui.visuals().text_color();
+
+    let (resp, painter) = ui.allocate_painter(
+        Vec2::new(board::BOARD_SIZE.x, board::CELL_SIZE.y),
+        Sense::hover(),
+    );
+
+    let draw = |color, ratio| {
+        let pos = Pos2::new(
+            resp.rect.left() + resp.rect.width() * ratio,
+            resp.rect.center().y,
+        );
+        let (fill, stroke) = match color {
+            Color::Black => board::DISK_BLACK,
+            Color::White => board::DISK_WHITE,
+        };
+
+        painter.circle(
+            pos - Vec2::new(board::CELL_SIZE.x / 2.0, 0.0),
+            board::DISK_RADIUS,
+            fill,
+            stroke,
+        );
+        painter.text(
+            pos,
+            Align2::LEFT_CENTER,
+            game.count_disk(Some(color)).to_string(),
+            text_style,
+            text_color,
+        );
+    };
+    draw(Color::Black, 1.0 / 4.0);
+    draw(Color::White, 3.0 / 4.0);
+}
+
+fn ui_game_status_label(ui: &mut egui::Ui, game: &Game, config: &ConfigState) {
+    if let Some(color) = game.turn_color() {
+        let player = config.player(color);
+        ui.heading(format!("{}'s Turn", player.name));
+        return;
+    }
+
+    let winner = match game
+        .count_disk(Some(Color::Black))
+        .cmp(&game.count_disk(Some(Color::White)))
+    {
+        Ordering::Less => Some(Color::White),
+        Ordering::Equal => None,
+        Ordering::Greater => Some(Color::Black),
+    };
+
+    if let Some(winner) = winner {
+        let player = config.player(winner);
+        ui.heading(format!("{} win", player.name));
+    } else {
+        ui.heading("draw");
     }
 }
