@@ -170,15 +170,8 @@ impl Board {
         })
     }
 
-    pub fn all_flipped(&self) -> impl Iterator<Item = (Pos, Board)> + '_ {
-        self.flip_candidates().into_iter().map(move |pos| {
-            let flipped = self.flipped_set_unchecked(pos);
-            let board = Self {
-                mine_disks: self.others_disks ^ flipped,
-                others_disks: self.mine_disks ^ flipped ^ pos,
-            };
-            (pos, board)
-        })
+    pub fn all_flipped(&self) -> AllFlipped<'_> {
+        AllFlipped::new(self)
     }
 
     pub fn can_flip(&self, pos: Pos) -> bool {
@@ -339,6 +332,55 @@ impl DoubleEndedIterator for PosDisks<'_> {
 impl ExactSizeIterator for PosDisks<'_> {}
 impl FusedIterator for PosDisks<'_> {}
 
+#[derive(Debug)]
+pub struct AllFlipped<'a> {
+    board: &'a Board,
+    candidates: PosSetIter,
+}
+
+impl<'a> AllFlipped<'a> {
+    fn new(board: &'a Board) -> Self {
+        Self {
+            board,
+            candidates: board.flip_candidates().into_iter(),
+        }
+    }
+
+    fn flipped(&self, pos: Pos) -> (Pos, Board) {
+        let Board {
+            mine_disks,
+            others_disks,
+        } = self.board;
+        let flipped = self.board.flipped_set_unchecked(pos);
+        let board = Board {
+            mine_disks: *others_disks ^ flipped,
+            others_disks: *mine_disks ^ flipped ^ pos,
+        };
+        (pos, board)
+    }
+}
+
+impl Iterator for AllFlipped<'_> {
+    type Item = (Pos, Board);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.candidates.next().map(|pos| self.flipped(pos))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.candidates.size_hint()
+    }
+}
+
+impl DoubleEndedIterator for AllFlipped<'_> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.candidates.next_back().map(|pos| self.flipped(pos))
+    }
+}
+
+impl ExactSizeIterator for AllFlipped<'_> {}
+impl FusedIterator for AllFlipped<'_> {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -374,6 +416,25 @@ mod tests {
             board.flip_candidates(),
             PosSet::from_iter([P::B6, P::C6, P::D6, P::E6, P::F6])
         );
+    }
+
+    #[test]
+    fn all_flipped() {
+        fn check(board: &Board, depth: i32) {
+            assert_eq!(
+                board.flip_candidates().count(),
+                board.all_flipped().len() as u32
+            );
+            for (pos, flipped) in board.all_flipped() {
+                let expected = board.flipped(pos).unwrap();
+                assert_eq!(flipped, expected);
+                if depth > 1 {
+                    check(&flipped, depth - 1);
+                }
+            }
+        }
+        let board = Board::new();
+        check(&board, 5);
     }
 
     #[test]
