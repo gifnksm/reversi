@@ -1,6 +1,9 @@
 use super::config::ConfigState;
 use crate::player::{AiLevel, ComputerKind, PlayerConf, PlayerKind};
-use eframe::egui::{self, Align2, Pos2, Sense, TextStyle, Vec2};
+use eframe::{
+    egui::{self, Align2, Pos2, Sense, TextStyle, Vec2},
+    epi,
+};
 use rand::prelude::*;
 use reversi_com::{Com, NextMove, WeightEvaluator};
 use reversi_core::{Color, Game, Pos};
@@ -91,11 +94,15 @@ impl PlayState {
         }
     }
 
-    pub(crate) fn ui(&mut self, ui: &mut egui::Ui) -> Option<super::GameState> {
+    pub(crate) fn ui(
+        &mut self,
+        ui: &mut egui::Ui,
+        frame: &mut epi::Frame,
+    ) -> Option<super::GameState> {
         if matches!(self.state, GameState::Init) {
-            self.update_state(ui);
+            self.update_state(ui, frame);
         }
-        self.check_status_updated(ui);
+        self.check_status_updated(ui, frame);
 
         ui.set_width(board::BOARD_SIZE.x + 50.0);
         ui.vertical_centered(|ui| {
@@ -104,19 +111,19 @@ impl PlayState {
 
             let is_human_turn = matches!(self.state, GameState::WaitHuman);
             if let Some(pos) = board::show(ui, &self.game, is_human_turn, self.last_put) {
-                self.put(ui, pos);
+                self.put(ui, frame, pos);
             }
         });
 
         None
     }
 
-    fn check_status_updated(&mut self, ui: &mut egui::Ui) {
+    fn check_status_updated(&mut self, ui: &mut egui::Ui, frame: &mut epi::Frame) {
         match &mut self.state {
             GameState::Init => {}
             GameState::WaitHuman => {}
             GameState::WaitComputer(rx) => match rx.try_recv() {
-                Ok(next_move) => self.put(ui, next_move.chosen.unwrap().0),
+                Ok(next_move) => self.put(ui, frame, next_move.chosen.unwrap().0),
                 Err(mpsc::TryRecvError::Empty) => {}
                 Err(mpsc::TryRecvError::Disconnected) => panic!(),
             },
@@ -124,11 +131,11 @@ impl PlayState {
         }
     }
 
-    fn put(&mut self, ui: &mut egui::Ui, pos: Pos) {
+    fn put(&mut self, ui: &mut egui::Ui, frame: &mut epi::Frame, pos: Pos) {
         match self.game.put_disk(pos) {
             Ok(()) => {
                 self.last_put = Some(pos);
-                self.update_state(ui);
+                self.update_state(ui, frame);
             }
             Err(e) => {
                 self.messages.push(e.to_string());
@@ -137,7 +144,7 @@ impl PlayState {
         }
     }
 
-    fn update_state(&mut self, ui: &mut egui::Ui) {
+    fn update_state(&mut self, ui: &mut egui::Ui, frame: &mut epi::Frame) {
         let color = match self.game.turn_color() {
             Some(color) => color,
             None => {
@@ -156,11 +163,11 @@ impl PlayState {
                 let com = com.clone();
                 let evaluator = evaluator.clone();
                 let board = *self.game.board();
-                let ctx = ui.ctx().clone();
+                let repaint_signal = frame.repaint_signal();
                 let (tx, rx) = mpsc::channel();
                 thread::spawn(move || {
                     tx.send(com.next_move(&*evaluator, &board)).unwrap();
-                    ctx.request_repaint();
+                    repaint_signal.request_repaint();
                 });
                 self.state = GameState::WaitComputer(rx);
             }
@@ -173,7 +180,7 @@ impl PlayState {
                     .into_iter()
                     .choose(&mut rng)
                     .unwrap();
-                self.put(ui, pos);
+                self.put(ui, frame, pos);
             }
             None => self.state = GameState::WaitHuman,
         };

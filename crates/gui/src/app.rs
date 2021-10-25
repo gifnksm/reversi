@@ -40,7 +40,7 @@ impl epi::App for App {
             .games
             .drain(..)
             .filter_map(|mut window| {
-                window.ui(ctx);
+                window.ui(ctx, frame);
                 window.open().then(|| window)
             })
             .collect();

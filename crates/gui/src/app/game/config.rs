@@ -1,6 +1,6 @@
 use super::{play::PlayState, GameState};
 use crate::player::{AiLevel, ComputerKind, PlayerConf, PlayerKind};
-use eframe::egui;
+use eframe::{egui, epi};
 use reversi_core::Color;
 
 #[derive(Debug, Clone)]
@@ -19,7 +19,7 @@ impl Default for ConfigState {
 }
 
 impl ConfigState {
-    pub(super) fn ui(&mut self, ui: &mut egui::Ui) -> Option<GameState> {
+    pub(super) fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut epi::Frame) -> Option<GameState> {
         let Self { player1, player2 } = self;
 
         let mut new_state = None;

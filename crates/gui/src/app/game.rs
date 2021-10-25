@@ -1,5 +1,5 @@
 use self::{config::ConfigState, play::PlayState};
-use eframe::egui;
+use eframe::{egui, epi};
 use std::sync::atomic::{AtomicU32, Ordering};
 
 mod config;
@@ -27,14 +27,14 @@ impl Game {
         !matches!(self.state, GameState::Closed)
     }
 
-    pub(super) fn ui(&mut self, ctx: &egui::CtxRef) {
+    pub(super) fn ui(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame) {
         let Self { title, state } = self;
 
         let mut open = true;
         egui::Window::new(title)
             .open(&mut open)
             .auto_sized()
-            .show(ctx, |ui| state.ui(ui));
+            .show(ctx, |ui| state.ui(ui, frame));
         if !open {
             *state = GameState::Closed;
         }
@@ -49,10 +49,10 @@ enum GameState {
 }
 
 impl GameState {
-    fn ui(&mut self, ui: &mut egui::Ui) {
+    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut epi::Frame) {
         let new_state = match self {
-            GameState::Config(state) => state.ui(ui),
-            GameState::Play(state) => state.ui(ui),
+            GameState::Config(state) => state.ui(ui, frame),
+            GameState::Play(state) => state.ui(ui, frame),
             GameState::Closed => None,
         };
         if let Some(new_state) = new_state {
