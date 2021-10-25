@@ -14,11 +14,11 @@ pub(super) fn show(
 
     let margin = ('1'..)
         .take(Board::SIZE as usize)
-        .map(|ch| fonts.layout_no_wrap(text_style, ch.into()).size.x)
+        .map(|ch| fonts.glyph_width(text_style, ch))
         .chain(
             ('A'..)
                 .take(Board::SIZE as usize)
-                .map(|ch| fonts.layout_no_wrap(text_style, ch.into()).size.y),
+                .map(|ch| fonts.glyph_width(text_style, ch)),
         )
         .max_by(|a, b| a.partial_cmp(b).unwrap())
         .unwrap();
