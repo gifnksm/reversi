@@ -2,7 +2,7 @@ use super::Board;
 use crate::traits::{IterOneBits, OneBits};
 use std::{
     fmt,
-    iter::FromIterator,
+    iter::{FromIterator, FusedIterator},
     num::ParseIntError,
     ops::{Range, Shl, Shr},
     str::FromStr,
@@ -164,6 +164,7 @@ impl DoubleEndedIterator for PosIter {
 }
 
 impl ExactSizeIterator for PosIter {}
+impl FusedIterator for PosIter {}
 
 #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PosSet(u64);
@@ -320,6 +321,7 @@ impl DoubleEndedIterator for PosSetIter {
 }
 
 impl ExactSizeIterator for PosSetIter {}
+impl FusedIterator for PosSetIter {}
 
 impl FromIterator<Pos> for PosSet {
     fn from_iter<T: IntoIterator<Item = Pos>>(iter: T) -> Self {

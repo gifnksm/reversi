@@ -1,3 +1,5 @@
+use std::iter::FusedIterator;
+
 pub trait IterOneBits: Sized {
     fn iter_one_bits(&self) -> OneBits<Self>;
 }
@@ -46,6 +48,7 @@ macro_rules! impl_ones {
             }
 
             impl ExactSizeIterator for OneBits<$ty> {}
+            impl FusedIterator for OneBits<$ty> {}
         )*
     };
 }

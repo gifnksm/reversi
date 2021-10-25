@@ -1,4 +1,5 @@
 pub use self::{color::*, pos::*};
+use std::iter::FusedIterator;
 
 mod color;
 mod pos;
@@ -298,6 +299,7 @@ impl DoubleEndedIterator for Disks<'_> {
 }
 
 impl ExactSizeIterator for Disks<'_> {}
+impl FusedIterator for Disks<'_> {}
 
 #[derive(Debug)]
 pub struct PosDisks<'a> {
@@ -335,6 +337,7 @@ impl DoubleEndedIterator for PosDisks<'_> {
 }
 
 impl ExactSizeIterator for PosDisks<'_> {}
+impl FusedIterator for PosDisks<'_> {}
 
 #[cfg(test)]
 mod tests {

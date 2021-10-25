@@ -1,4 +1,5 @@
 use crate::{Board, Color, Disk, Pos, PosIter};
+use std::iter::FusedIterator;
 
 #[derive(Debug, Clone)]
 pub struct Game {
@@ -158,6 +159,7 @@ impl DoubleEndedIterator for Disks<'_> {
 }
 
 impl ExactSizeIterator for Disks<'_> {}
+impl FusedIterator for Disks<'_> {}
 
 #[derive(Debug)]
 pub struct PosDisks<'a> {
@@ -195,3 +197,4 @@ impl DoubleEndedIterator for PosDisks<'_> {
 }
 
 impl ExactSizeIterator for PosDisks<'_> {}
+impl FusedIterator for PosDisks<'_> {}
